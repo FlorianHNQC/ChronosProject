@@ -1,0 +1,27 @@
+node_modules
+dist
+build
+.DS_Store
+
+# Env (jamais de secrets versionnés)
+.env
+.env.local
+.env.*.local
+
+# Serveur / uploads (vivent sur le VPS)
+server/public
+public/uploads/
+
+# Dumps DB
+dump.sql
+dump-data.sql
+
+# Divers plateformes
+.replit
+replit.md
+.local/
+
+# Métadonnées d'outillage
+.claude/
+vite.config.ts.*
+*.tar.gz

@@ -1,0 +1,17 @@
+# Normalisation des fins de ligne — corrige le bruit CRLF/LF constaté sur
+# leaguebs et statsbs. Git stocke en LF, et restitue selon la plateforme.
+* text=auto eol=lf
+
+# Scripts shell : toujours LF (exécutés sur le VPS Linux).
+*.sh text eol=lf
+
+# Binaires : jamais de conversion.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
