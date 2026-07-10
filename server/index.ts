@@ -1,3 +1,4 @@
+import "./load-env"; // doit rester le tout premier import (charge .env.local)
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import path from "path";
@@ -33,7 +34,7 @@ export function log(message: string, source = "express") {
   console.log(`${t} [${source}] ${message}`);
 }
 
-// Journalisation légère des appels /api.
+// Journalisation legere des appels /api.
 app.use((req, res, next) => {
   const start = Date.now();
   const reqPath = req.path;
@@ -47,7 +48,8 @@ app.use((req, res, next) => {
     if (reqPath.startsWith("/api")) {
       let line = `${req.method} ${reqPath} ${res.statusCode} in ${Date.now() - start}ms`;
       if (captured) line += ` :: ${JSON.stringify(captured)}`;
-      log(line.length > 200 ? line.slice(0, 199) + "…" : line);
+      if (line.length > 200) line = line.slice(0, 199) + "...";
+      log(line);
     }
   });
   next();
@@ -63,7 +65,7 @@ app.use((req, res, next) => {
     res.status(status).json({ message: err.message || "Internal Server Error" });
   });
 
-  // Vite en dev, statique en prod — après les routes API.
+  // Vite en dev, statique en prod — apres les routes API.
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -73,6 +75,6 @@ app.use((req, res, next) => {
 
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen({ port, host: "0.0.0.0" }, () => {
-    log(`Chronos en écoute sur le port ${port}`);
+    log(`Chronos en ecoute sur le port ${port}`);
   });
 })();

@@ -7,14 +7,14 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Placeholder } from "@/pages/placeholder";
+import { PlayersPage } from "@/pages/players";
+import { PlayersAdminPage } from "@/pages/admin/players-admin";
 import NotFound from "@/pages/not-found";
 
 /**
- * Shell applicatif de fondation.
- *
- * Fournit les providers (React Query, thème sombre, tooltips) et la coquille de
- * navigation groupée. Les routes pointent vers des placeholders : le portage
- * des vraies pages se fera dans les incréments suivants.
+ * Shell applicatif.
+ * V1 : le module Joueurs est branché ; les autres routes restent des
+ * placeholders en attendant le portage / l'implémentation.
  */
 function Shell() {
   return (
@@ -34,10 +34,11 @@ function Shell() {
             <Route path="/playoffs" component={() => <Placeholder title="Playoffs" />} />
             <Route path="/hydra" component={() => <Placeholder title="Hydra — classement par tiers" note="Section Hydra (façon Prydwen) : accordéons, modes Joueurs / Rookie / Réserve, tags. À implémenter." />} />
             <Route path="/equipes" component={() => <Placeholder title="Équipes" />} />
-            <Route path="/joueurs" component={() => <Placeholder title="Joueurs" note="Profils synchronisés via l'API Brawl Stars (à implémenter)." />} />
+            <Route path="/joueurs" component={PlayersPage} />
             <Route path="/stats" component={() => <Placeholder title="Classements de stats" />} />
             <Route path="/recompenses" component={() => <Placeholder title="Récompenses" />} />
-            <Route path="/admin" component={() => <Placeholder title="Console d'administration" />} />
+            <Route path="/admin/joueurs" component={PlayersAdminPage} />
+            <Route path="/admin" component={() => <Placeholder title="Console d'administration" note="Choisissez une rubrique — ex. Joueurs." />} />
             <Route component={NotFound} />
           </Switch>
         </main>
