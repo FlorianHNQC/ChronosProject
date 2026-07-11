@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   Trophy, Swords, Users, BarChart3, Sparkles, Shield, LayoutList,
-  CalendarDays, Award, Home, UserCog,
+  CalendarDays, Award, Home, UserCog, Tags, SlidersHorizontal,
 } from "lucide-react";
 
 /**
@@ -57,6 +57,9 @@ const NAV: NavGroup[] = [
     items: [
       { label: "Console admin", href: "/admin", icon: Shield },
       { label: "Joueurs (admin)", href: "/admin/joueurs", icon: UserCog },
+      { label: "Hydra (admin)", href: "/admin/hydra", icon: Sparkles },
+      { label: "Tiers (admin)", href: "/admin/tiers", icon: SlidersHorizontal },
+      { label: "Tags (admin)", href: "/admin/tags", icon: Tags },
     ],
   },
 ];

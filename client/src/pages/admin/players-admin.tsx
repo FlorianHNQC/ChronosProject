@@ -12,6 +12,9 @@ import type { Player } from "@shared/schema";
  * Console admin — ajout de joueurs par tag Brawl Stars.
  * Le back interroge l'API officielle, résout l'avatar via Brawlify et
  * enregistre le profil. Rappel : le token API est verrouillé par IP.
+ *
+ * UX : le « # » est affiché en préfixe fixe du champ — l'utilisateur ne tape
+ * que la suite du tag (le back tolère aussi un « # » collé au début).
  */
 export function PlayersAdminPage() {
   const { toast } = useToast();
@@ -70,18 +73,25 @@ export function PlayersAdminPage() {
             if (tag.trim()) addPlayer.mutate();
           }}
         >
-          <Input
-            value={tag}
-            onChange={(e) => setTag(e.target.value)}
-            placeholder="#2PP0LG"
-            className="sm:flex-1"
-          />
+          <div className="relative sm:flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground select-none pointer-events-none font-medium">
+              #
+            </span>
+            <Input
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              placeholder="2PP0LG"
+              className="pl-7 uppercase"
+              autoCapitalize="characters"
+              spellCheck={false}
+            />
+          </div>
           <Input
             value={nationality}
             onChange={(e) => setNationality(e.target.value)}
             placeholder="Nat. (BJ)"
             maxLength={2}
-            className="sm:w-28"
+            className="sm:w-28 uppercase"
           />
           <Button type="submit" disabled={addPlayer.isPending || !tag.trim()}>
             <Plus className="h-4 w-4 mr-1" />
@@ -89,8 +99,8 @@ export function PlayersAdminPage() {
           </Button>
         </form>
         <p className="text-xs text-muted-foreground mt-2">
-          Le tag est l'identifiant du profil in-game (ex. #2PP0LG). Nécessite un
-          token API valide et une IP autorisée.
+          Le tag est l'identifiant du profil in-game. Inutile de taper le « # » —
+          il est déjà là. Nécessite un token API valide et une IP autorisée.
         </p>
       </Card>
 

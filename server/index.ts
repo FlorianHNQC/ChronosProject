@@ -3,7 +3,10 @@ import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import path from "path";
 import { registerRoutes } from "./routes";
+import { registerHydraRoutes } from "./hydraRoutes";
+import { registerHydraAdminRoutes } from "./hydraAdminRoutes";
 import { serveStatic } from "./static";
+import { seedDefaults } from "./seed";
 
 const app = express();
 
@@ -56,7 +59,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Seeding idempotent (paliers de tiers…). N'empêche pas le boot si la DB est down.
+  try {
+    await seedDefaults();
+  } catch (e) {
+    console.warn("[seed] ignoré (DB indisponible ?) :", (e as Error).message);
+  }
+
   await registerRoutes(httpServer, app);
+  registerHydraRoutes(app);
+  registerHydraAdminRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

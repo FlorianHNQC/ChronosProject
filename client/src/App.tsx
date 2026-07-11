@@ -8,13 +8,17 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Placeholder } from "@/pages/placeholder";
 import { PlayersPage } from "@/pages/players";
+import { HydraPage } from "@/pages/hydra";
 import { PlayersAdminPage } from "@/pages/admin/players-admin";
+import { HydraAdminPage } from "@/pages/admin/hydra-admin";
+import { TiersAdminPage } from "@/pages/admin/tiers-admin";
+import { TagsAdminPage } from "@/pages/admin/tags-admin";
 import NotFound from "@/pages/not-found";
 
 /**
  * Shell applicatif.
- * V1 : le module Joueurs est branché ; les autres routes restent des
- * placeholders en attendant le portage / l'implémentation.
+ * Modules branchés : Joueurs, Hydra (tiers + tags), admin (joueurs, Elo, tiers,
+ * tags). Les autres routes restent des placeholders.
  */
 function Shell() {
   return (
@@ -32,13 +36,16 @@ function Shell() {
             <Route path="/competitions" component={() => <Placeholder title="Ligue & tournois" />} />
             <Route path="/calendrier" component={() => <Placeholder title="Calendrier" />} />
             <Route path="/playoffs" component={() => <Placeholder title="Playoffs" />} />
-            <Route path="/hydra" component={() => <Placeholder title="Hydra — classement par tiers" note="Section Hydra (façon Prydwen) : accordéons, modes Joueurs / Rookie / Réserve, tags. À implémenter." />} />
+            <Route path="/hydra" component={HydraPage} />
             <Route path="/equipes" component={() => <Placeholder title="Équipes" />} />
             <Route path="/joueurs" component={PlayersPage} />
             <Route path="/stats" component={() => <Placeholder title="Classements de stats" />} />
             <Route path="/recompenses" component={() => <Placeholder title="Récompenses" />} />
             <Route path="/admin/joueurs" component={PlayersAdminPage} />
-            <Route path="/admin" component={() => <Placeholder title="Console d'administration" note="Choisissez une rubrique — ex. Joueurs." />} />
+            <Route path="/admin/hydra" component={HydraAdminPage} />
+            <Route path="/admin/tiers" component={TiersAdminPage} />
+            <Route path="/admin/tags" component={TagsAdminPage} />
+            <Route path="/admin" component={() => <Placeholder title="Console d'administration" note="Choisissez une rubrique — Joueurs, Hydra, Tiers ou Tags." />} />
             <Route component={NotFound} />
           </Switch>
         </main>
