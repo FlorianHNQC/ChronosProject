@@ -88,7 +88,9 @@ export const competitions = pgTable("competitions", {
   // Configuration libre du format et des restrictions de composition (budget,
   // quotas de tiers, quotas de nationalité, règles de drifter…).
   rulesetJson: text("ruleset_json"),
+  // Cycle de vie : draft (brouillon) → active → archived (clôturée, historique).
   status: text("status").default("draft"),
+  closedAt: timestamp("closed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

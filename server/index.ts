@@ -5,6 +5,7 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { registerHydraRoutes } from "./hydraRoutes";
 import { registerHydraAdminRoutes } from "./hydraAdminRoutes";
+import { registerCompetitionsRoutes } from "./competitionsRoutes";
 import { serveStatic } from "./static";
 import { seedDefaults } from "./seed";
 
@@ -69,6 +70,7 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
   registerHydraRoutes(app);
   registerHydraAdminRoutes(app);
+  registerCompetitionsRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

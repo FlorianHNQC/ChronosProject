@@ -9,16 +9,18 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Placeholder } from "@/pages/placeholder";
 import { PlayersPage } from "@/pages/players";
 import { HydraPage } from "@/pages/hydra";
+import { CompetitionsPage } from "@/pages/competitions";
 import { PlayersAdminPage } from "@/pages/admin/players-admin";
 import { HydraAdminPage } from "@/pages/admin/hydra-admin";
 import { TiersAdminPage } from "@/pages/admin/tiers-admin";
 import { TagsAdminPage } from "@/pages/admin/tags-admin";
+import { CompetitionsAdminPage } from "@/pages/admin/competitions-admin";
 import NotFound from "@/pages/not-found";
 
 /**
  * Shell applicatif.
- * Modules branchés : Joueurs, Hydra (tiers + tags), admin (joueurs, Elo, tiers,
- * tags). Les autres routes restent des placeholders.
+ * Modules branchés : Joueurs, Hydra (tiers + tags), Compétitions (cycle de vie),
+ * et l'administration. Les autres routes restent des placeholders.
  */
 function Shell() {
   return (
@@ -33,7 +35,7 @@ function Shell() {
         <main className="flex-1 overflow-auto">
           <Switch>
             <Route path="/" component={() => <Placeholder title="Chronos" note="Plateforme unifiée — fondation en place. Choisissez une section dans la barre latérale." />} />
-            <Route path="/competitions" component={() => <Placeholder title="Ligue & tournois" />} />
+            <Route path="/competitions" component={CompetitionsPage} />
             <Route path="/calendrier" component={() => <Placeholder title="Calendrier" />} />
             <Route path="/playoffs" component={() => <Placeholder title="Playoffs" />} />
             <Route path="/hydra" component={HydraPage} />
@@ -45,7 +47,8 @@ function Shell() {
             <Route path="/admin/hydra" component={HydraAdminPage} />
             <Route path="/admin/tiers" component={TiersAdminPage} />
             <Route path="/admin/tags" component={TagsAdminPage} />
-            <Route path="/admin" component={() => <Placeholder title="Console d'administration" note="Choisissez une rubrique — Joueurs, Hydra, Tiers ou Tags." />} />
+            <Route path="/admin/competitions" component={CompetitionsAdminPage} />
+            <Route path="/admin" component={() => <Placeholder title="Console d'administration" note="Choisissez une rubrique — Compétitions, Joueurs, Hydra, Tiers ou Tags." />} />
             <Route component={NotFound} />
           </Switch>
         </main>

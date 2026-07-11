@@ -56,6 +56,7 @@ const NAV: NavGroup[] = [
     label: "Administration",
     items: [
       { label: "Console admin", href: "/admin", icon: Shield },
+      { label: "Compétitions (admin)", href: "/admin/competitions", icon: Trophy },
       { label: "Joueurs (admin)", href: "/admin/joueurs", icon: UserCog },
       { label: "Hydra (admin)", href: "/admin/hydra", icon: Sparkles },
       { label: "Tiers (admin)", href: "/admin/tiers", icon: SlidersHorizontal },
