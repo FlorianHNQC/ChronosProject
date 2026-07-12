@@ -12,9 +12,11 @@ build
 server/public
 public/uploads/
 
-# Dumps DB
+# Dumps DB (ne jamais versionner — contiennent des données)
 dump.sql
 dump-data.sql
+*.dump
+migrations/legacy_import.sql
 
 # Divers plateformes
 .replit

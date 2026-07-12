@@ -58,7 +58,7 @@ export function CompetitionsAdminPage() {
   const byStatus = (s: string) => (comps ?? []).filter((c) => c.status === s);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="w-full px-6 py-8">
       <h1 className="text-2xl font-bold mb-6">Compétitions</h1>
 
       <Card className="p-4 mb-8">

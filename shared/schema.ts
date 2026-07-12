@@ -154,6 +154,25 @@ export const players = pgTable("players", {
 }));
 
 /* ============================================================
+ * ROSTER  (Chronos — composition d'équipe PAR compétition)
+ * Un joueur appartient à une équipe dans le cadre d'une compétition. Préserve
+ * l'historique : archiver une ligue fige ses effectifs, cloner repart propre.
+ * ========================================================== */
+export const teamPlayers = pgTable("team_players", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").references(() => teams.id).notNull(),
+  playerId: varchar("player_id").references(() => players.id).notNull(),
+  isCaptain: boolean("is_captain").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  uniqTeamPlayer: uniqueIndex("team_players_team_player_idx").on(t.teamId, t.playerId),
+}));
+
+export const insertTeamPlayerSchema = createInsertSchema(teamPlayers).omit({ id: true, createdAt: true });
+export type TeamPlayer = typeof teamPlayers.$inferSelect;
+export type InsertTeamPlayer = z.infer<typeof insertTeamPlayerSchema>;
+
+/* ============================================================
  * TIERS & CLASSEMENT  (Chronos — nouveau)
  * Le tier est une catégorie dérivée de l'Elo ; les seuils sont éditables.
  * ========================================================== */
@@ -317,6 +336,7 @@ export const seasonAwards = pgTable("season_awards", {
 export const playoffSeries = pgTable("playoff_series", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   seasonId: varchar("season_id").references(() => seasons.id),
+  competitionId: varchar("competition_id").references(() => competitions.id),
   round: text("round").notNull(),
   bracketPosition: integer("bracket_position").notNull(),
   teamAId: varchar("team_a_id").references(() => teams.id),

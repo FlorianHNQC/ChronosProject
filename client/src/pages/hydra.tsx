@@ -9,45 +9,36 @@ import { tierForElo } from "@shared/tiers";
 import type { Player, Tier } from "@shared/schema";
 
 type ChangelogEntry = {
-  id: string;
-  pseudo: string | null;
-  oldElo: number | null;
-  newElo: number | null;
-  comment: string | null;
-  createdAt: string | null;
+  id: string; pseudo: string | null; oldElo: number | null; newElo: number | null;
+  comment: string | null; createdAt: string | null;
 };
-
 type PlayerTagRow = {
-  playerId: string;
-  tagId: string;
-  code: string;
-  label: string;
-  family: "palmares" | "comportement";
-  color: string | null;
+  playerId: string; tagId: string; code: string; label: string;
+  family: "palmares" | "comportement"; color: string | null;
 };
 
-const MODES = [
-  { id: "joueurs", label: "Joueurs", enabled: true },
-  { id: "rookie", label: "Rookie", enabled: false },
-  { id: "reserve", label: "Réserve", enabled: false },
-] as const;
+type Mode = "joueurs" | "rookie" | "reserve";
+const DAY = 86400000;
+const RESERVE_DAYS = 90; // inactivité au-delà de laquelle un joueur passe en Réserve
 
-/** Fourchette d'Elo d'un tier : de son minElo jusqu'au minElo du tier supérieur - 1. */
+/** Mode dérivé d'un joueur (non stocké). */
+function playerMode(p: Player): Mode {
+  if ((p.competitionsPlayed ?? 0) === 0) return "rookie";
+  if (p.lastEloChangeAt && Date.now() - new Date(p.lastEloChangeAt).getTime() > RESERVE_DAYS * DAY) return "reserve";
+  return "joueurs";
+}
+
 function eloRange(tier: Tier, tiers: Tier[]): string {
-  const higher = tiers
-    .filter((t) => t.minElo > tier.minElo)
-    .sort((a, b) => a.minElo - b.minElo)[0];
+  const higher = tiers.filter((t) => t.minElo > tier.minElo).sort((a, b) => a.minElo - b.minElo)[0];
   return higher ? `${tier.minElo}–${higher.minElo - 1}` : `${tier.minElo}+`;
 }
 
 /**
- * Section Hydra — programme de classement par tiers (§12/§15 du CDC).
- * Cartes verticales (photo en grand, pseudo dessous, tags dessous), regroupées
- * par tier sans classement intra-tier. Tous les tiers sont affichés avec leur
- * palier d'Elo. Recherche + filtre par tags.
+ * Section Hydra — classement par tiers. Modes Joueurs / Rookie (jamais joué) /
+ * Réserve (inactif), dérivés des signaux du joueur.
  */
 export function HydraPage() {
-  const [mode, setMode] = useState<(typeof MODES)[number]["id"]>("joueurs");
+  const [mode, setMode] = useState<Mode>("joueurs");
   const [q, setQ] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
@@ -56,29 +47,36 @@ export function HydraPage() {
   const { data: changelog } = useQuery<ChangelogEntry[]>({ queryKey: ["/api/hydra/changelog"] });
   const { data: playerTags } = useQuery<PlayerTagRow[]>({ queryKey: ["/api/player-tags"] });
 
-  // Map joueur -> tags.
   const tagsByPlayer = useMemo(() => {
     const map = new Map<string, PlayerTagRow[]>();
-    for (const a of playerTags ?? []) {
-      if (!map.has(a.playerId)) map.set(a.playerId, []);
-      map.get(a.playerId)!.push(a);
-    }
+    for (const a of playerTags ?? []) { if (!map.has(a.playerId)) map.set(a.playerId, []); map.get(a.playerId)!.push(a); }
     return map;
   }, [playerTags]);
 
-  // Catalogue de tags présents (pour les chips de filtre).
   const allTags = useMemo(() => {
     const seen = new Map<string, PlayerTagRow>();
     for (const a of playerTags ?? []) if (!seen.has(a.tagId)) seen.set(a.tagId, a);
     return Array.from(seen.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [playerTags]);
 
+  const modeCounts = useMemo(() => {
+    const c: Record<Mode, number> = { joueurs: 0, rookie: 0, reserve: 0 };
+    for (const p of players ?? []) c[playerMode(p)]++;
+    return c;
+  }, [players]);
+
+  const MODES: { id: Mode; label: string }[] = [
+    { id: "joueurs", label: "Joueurs" },
+    { id: "rookie", label: "Rookie" },
+    { id: "reserve", label: "Réserve" },
+  ];
+
   const rows = useMemo(() => {
     const allTiers = tiers ?? [];
     const allPlayers = players ?? [];
     const needle = q.trim().toLowerCase();
-
     const visible = allPlayers.filter((p) => {
+      if (playerMode(p) !== mode) return false;
       if (needle && !p.pseudo.toLowerCase().includes(needle)) return false;
       if (selectedTags.length > 0) {
         const ids = (tagsByPlayer.get(p.id) ?? []).map((t) => t.tagId);
@@ -86,31 +84,22 @@ export function HydraPage() {
       }
       return true;
     });
-
     const byTier = new Map<string, Player[]>();
     const unranked: Player[] = [];
     for (const p of visible) {
       const t = tierForElo(p.elo, allTiers);
       if (!t) unranked.push(p);
-      else {
-        if (!byTier.has(t.id)) byTier.set(t.id, []);
-        byTier.get(t.id)!.push(p);
-      }
+      else { if (!byTier.has(t.id)) byTier.set(t.id, []); byTier.get(t.id)!.push(p); }
     }
-    const ordered = [...allTiers]
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((t) => ({
-        tier: t,
-        range: eloRange(t, allTiers),
-        players: (byTier.get(t.id) ?? []).sort((a, b) => a.pseudo.localeCompare(b.pseudo)),
-      }));
+    const ordered = [...allTiers].sort((a, b) => a.orderIndex - b.orderIndex).map((t) => ({
+      tier: t, range: eloRange(t, allTiers),
+      players: (byTier.get(t.id) ?? []).sort((a, b) => a.pseudo.localeCompare(b.pseudo)),
+    }));
     return { ordered, unranked: unranked.sort((a, b) => a.pseudo.localeCompare(b.pseudo)) };
-  }, [tiers, players, q, selectedTags, tagsByPlayer]);
+  }, [tiers, players, q, selectedTags, tagsByPlayer, mode]);
 
   const toggleTag = (id: string) =>
-    setSelectedTags((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    setSelectedTags((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return (
     <div className="w-full px-6 py-8">
@@ -119,43 +108,32 @@ export function HydraPage() {
         <h1 className="text-2xl font-bold">Hydra</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-6">
-        Programme de classement par tiers. Tous les joueurs qui participent à une
-        compétition en font partie — ce n'est pas une élite, c'est l'outil qui
-        équilibre les équipes.
+        Programme de classement par tiers. Tous les joueurs qui participent à une compétition en font partie.
       </p>
 
       <Accordion type="single" collapsible className="mb-6 border rounded-lg px-4">
         <AccordionItem value="about">
           <AccordionTrigger>À propos de Hydra</AccordionTrigger>
           <AccordionContent>
-            La tier list est un outil d'organisation, pas un jugement de valeur.
-            Le tier sert à répartir le niveau pour rendre les compétitions
-            disputées. Être dans un tier bas ne veut pas dire « être nul ».
+            Un outil d'organisation, pas un jugement de valeur : le tier sert à répartir le niveau pour des compétitions disputées.
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="tags">
           <AccordionTrigger>Catégories et tags</AccordionTrigger>
           <AccordionContent>
-            Les tags apportent du contexte sans hiérarchie : palmarès (Champion…)
-            et comportement (Nomade, Drifter actif, Révélation…). Utilisez les
-            filtres ci-dessous pour cibler un tag.
+            Palmarès (Champion…) et comportement (Nomade, Drifter actif…). Utilisez les filtres ci-dessous.
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="notes">
           <AccordionTrigger>Notes (notation)</AccordionTrigger>
           <AccordionContent>
-            Le tier est dérivé d'une cote d'Elo. L'Elo pondère d'abord les
-            résultats objectifs ; les statistiques in-game ne sont qu'un signal
-            secondaire (bug du jeu en partie privée). Les seuils des tiers sont
-            configurables.
+            Le tier est dérivé de l'Elo, piloté d'abord par les résultats. Seuils configurables.
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="criteria">
           <AccordionTrigger>Critères</AccordionTrigger>
           <AccordionContent>
-            Apparaissent ici les joueurs actifs ayant participé aux compétitions.
-            Les nouveaux venus (mode Rookie) et les joueurs inactifs (mode
-            Réserve) seront présentés séparément.
+            <b>Joueurs</b> : ont déjà joué une compétition. <b>Rookie</b> : nouveaux venus (aucune compétition jouée). <b>Réserve</b> : inactifs depuis plus de {RESERVE_DAYS} jours.
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="changelog">
@@ -166,9 +144,7 @@ export function HydraPage() {
                 {changelog.map((c) => (
                   <li key={c.id} className="text-sm">
                     <span className="font-medium">{c.pseudo ?? "?"}</span>{" "}
-                    <span className="text-muted-foreground">
-                      {c.oldElo ?? "—"} → {c.newElo ?? "—"}
-                    </span>
+                    <span className="text-muted-foreground">{c.oldElo ?? "—"} → {c.newElo ?? "—"}</span>
                     {c.comment ? <span className="text-muted-foreground"> · {c.comment}</span> : null}
                   </li>
                 ))}
@@ -184,20 +160,10 @@ export function HydraPage() {
         {MODES.map((m) => (
           <button
             key={m.id}
-            disabled={!m.enabled}
-            onClick={() => m.enabled && setMode(m.id)}
-            className={
-              "px-3 py-1.5 rounded-md text-sm font-medium transition-colors " +
-              (mode === m.id
-                ? "bg-primary text-primary-foreground"
-                : m.enabled
-                ? "bg-muted hover:bg-muted/70"
-                : "bg-muted/40 text-muted-foreground cursor-not-allowed")
-            }
-            title={m.enabled ? undefined : "À venir"}
+            onClick={() => setMode(m.id)}
+            className={"px-3 py-1.5 rounded-md text-sm font-medium transition-colors " + (mode === m.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/70")}
           >
-            {m.label}
-            {!m.enabled && <span className="ml-1 text-[10px] opacity-70">(à venir)</span>}
+            {m.label} <span className="opacity-70">({modeCounts[m.id]})</span>
           </button>
         ))}
         <div className="relative ml-auto w-56 max-w-full">
@@ -206,41 +172,30 @@ export function HydraPage() {
         </div>
       </div>
 
-      {/* Filtre par tags */}
       {allTags.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 mb-4">
           <span className="text-xs text-muted-foreground mr-1">Filtrer :</span>
           {allTags.map((t) => {
             const on = selectedTags.includes(t.tagId);
             return (
-              <button
-                key={t.tagId}
-                onClick={() => toggleTag(t.tagId)}
+              <button key={t.tagId} onClick={() => toggleTag(t.tagId)}
                 className={"text-xs font-medium px-2 py-0.5 rounded transition-opacity " + (on ? "text-white" : "text-white/70 opacity-60 hover:opacity-100")}
-                style={{ backgroundColor: t.color ?? "#666", outline: on ? "2px solid white" : "none" }}
-              >
+                style={{ backgroundColor: t.color ?? "#666", outline: on ? "2px solid white" : "none" }}>
                 {t.label}
               </button>
             );
           })}
           {selectedTags.length > 0 && (
-            <button onClick={() => setSelectedTags([])} className="text-xs text-muted-foreground underline ml-1">
-              réinitialiser
-            </button>
+            <button onClick={() => setSelectedTags([])} className="text-xs text-muted-foreground underline ml-1">réinitialiser</button>
           )}
         </div>
       )}
 
       <div className="space-y-2">
-        {(!tiers || tiers.length === 0) && (
-          <p className="text-sm text-muted-foreground">Aucun tier configuré.</p>
-        )}
+        {(!tiers || tiers.length === 0) && <p className="text-sm text-muted-foreground">Aucun tier configuré.</p>}
         {rows.ordered.map(({ tier, range, players }) => (
           <div key={tier.id} className="flex rounded-lg border overflow-hidden">
-            <div
-              className="flex flex-col items-center justify-center gap-0.5 w-24 shrink-0 py-3 text-white"
-              style={{ backgroundColor: tier.color ?? "#666" }}
-            >
+            <div className="flex flex-col items-center justify-center gap-0.5 w-24 shrink-0 py-3 text-white" style={{ backgroundColor: tier.color ?? "#666" }}>
               <span className="text-xl font-extrabold leading-none">{tier.code}</span>
               <span className="text-[10px] opacity-80 mt-0.5">{range}</span>
             </div>
@@ -248,14 +203,11 @@ export function HydraPage() {
               {players.length === 0 ? (
                 <span className="text-xs text-muted-foreground self-center">—</span>
               ) : (
-                players.map((p) => (
-                  <PlayerCard key={p.id} player={p} tags={tagsByPlayer.get(p.id) ?? []} />
-                ))
+                players.map((p) => <PlayerCard key={p.id} player={p} tags={tagsByPlayer.get(p.id) ?? []} />)
               )}
             </div>
           </div>
         ))}
-
         {rows.unranked.length > 0 && (
           <div className="flex rounded-lg border overflow-hidden opacity-90">
             <div className="flex flex-col items-center justify-center w-24 shrink-0 py-3 text-white bg-muted-foreground">
@@ -263,9 +215,7 @@ export function HydraPage() {
               <span className="text-[10px] opacity-80 mt-0.5">Sans Elo</span>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-4 p-4 flex-1 items-start content-start">
-              {rows.unranked.map((p) => (
-                <PlayerCard key={p.id} player={p} tags={tagsByPlayer.get(p.id) ?? []} />
-              ))}
+              {rows.unranked.map((p) => <PlayerCard key={p.id} player={p} tags={tagsByPlayer.get(p.id) ?? []} />)}
             </div>
           </div>
         )}
@@ -274,39 +224,21 @@ export function HydraPage() {
   );
 }
 
-/**
- * Carte joueur verticale : photo en grand (référentiel visuel), pseudo dessous,
- * puis les tags.
- */
 function PlayerCard({ player, tags }: { player: Player; tags: PlayerTagRow[] }) {
   return (
     <div className="w-[84px] flex flex-col items-center text-center" title={`Elo ${player.elo ?? "—"}`}>
       {player.avatarUrl ? (
-        <img
-          src={player.avatarUrl}
-          alt={player.pseudo}
-          className="h-[76px] w-[76px] rounded-lg object-cover bg-muted ring-1 ring-border"
-          loading="lazy"
-        />
+        <img src={player.avatarUrl} alt={player.pseudo} className="h-[76px] w-[76px] rounded-lg object-cover bg-muted ring-1 ring-border" loading="lazy" />
       ) : (
         <div className="h-[76px] w-[76px] rounded-lg bg-muted flex items-center justify-center ring-1 ring-border">
           <UserRound className="h-9 w-9 text-muted-foreground" />
         </div>
       )}
-      <span className="mt-1 text-xs font-semibold leading-tight break-words w-full">
-        {player.pseudo}
-      </span>
+      <span className="mt-1 text-xs font-semibold leading-tight break-words w-full">{player.pseudo}</span>
       {tags.length > 0 && (
         <div className="mt-0.5 flex flex-wrap justify-center gap-x-1.5 leading-tight">
           {tags.map((t) => (
-            <span
-              key={t.tagId}
-              className="text-[11px] font-medium"
-              style={{ color: t.color ?? undefined }}
-              title={t.label}
-            >
-              {t.label}
-            </span>
+            <span key={t.tagId} className="text-[11px] font-medium" style={{ color: t.color ?? undefined }} title={t.label}>{t.label}</span>
           ))}
         </div>
       )}

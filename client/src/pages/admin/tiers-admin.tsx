@@ -16,7 +16,7 @@ export function TiersAdminPage() {
   const ordered = [...(tiers ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="w-full px-6 py-8">
       <h1 className="text-2xl font-bold mb-2">Tiers — seuils d'Elo</h1>
       <p className="text-sm text-muted-foreground mb-6">
         Un joueur est classé dans le tier dont le seuil d'Elo est le plus haut

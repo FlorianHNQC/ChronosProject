@@ -2,10 +2,20 @@ import "./load-env"; // doit rester le tout premier import (charge .env.local)
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import path from "path";
+import { setupAuth, requireAdminWrites, seedAdmin } from "./auth";
 import { registerRoutes } from "./routes";
 import { registerHydraRoutes } from "./hydraRoutes";
 import { registerHydraAdminRoutes } from "./hydraAdminRoutes";
 import { registerCompetitionsRoutes } from "./competitionsRoutes";
+import { registerTeamsRoutes } from "./teamsRoutes";
+import { registerMatchesRoutes } from "./matchesRoutes";
+import { registerStatsRoutes } from "./statsRoutes";
+import { registerPlayerDetailRoutes } from "./playerDetailRoutes";
+import { registerMergeRoutes } from "./mergeRoutes";
+import { registerArchiveRoutes } from "./archiveRoutes";
+import { registerEloRoutes } from "./eloRoutes";
+import { registerValidationRoutes } from "./validationRoutes";
+import { registerDrifterRoutes } from "./drifterRoutes";
 import { serveStatic } from "./static";
 import { seedDefaults } from "./seed";
 
@@ -32,6 +42,10 @@ app.use(
   }),
 );
 app.use(express.urlencoded({ extended: false }));
+
+// Authentification : session + routes /api/auth, puis garde des écritures.
+setupAuth(app);
+app.use(requireAdminWrites);
 
 export function log(message: string, source = "express") {
   const t = new Date().toLocaleTimeString("fr-FR", { hour12: false });
@@ -60,9 +74,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Seeding idempotent (paliers de tiers…). N'empêche pas le boot si la DB est down.
+  // Seeding idempotent (paliers de tiers, admin par défaut…). N'empêche pas le boot si la DB est down.
   try {
     await seedDefaults();
+    await seedAdmin();
   } catch (e) {
     console.warn("[seed] ignoré (DB indisponible ?) :", (e as Error).message);
   }
@@ -71,6 +86,15 @@ app.use((req, res, next) => {
   registerHydraRoutes(app);
   registerHydraAdminRoutes(app);
   registerCompetitionsRoutes(app);
+  registerTeamsRoutes(app);
+  registerMatchesRoutes(app);
+  registerStatsRoutes(app);
+  registerPlayerDetailRoutes(app);
+  registerMergeRoutes(app);
+  registerArchiveRoutes(app);
+  registerEloRoutes(app);
+  registerValidationRoutes(app);
+  registerDrifterRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

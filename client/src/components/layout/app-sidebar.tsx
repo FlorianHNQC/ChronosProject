@@ -6,6 +6,7 @@ import {
 import {
   Trophy, Swords, Users, BarChart3, Sparkles, Shield, LayoutList,
   CalendarDays, Award, Home, UserCog, Tags, SlidersHorizontal,
+  ClipboardCheck, Shuffle,
 } from "lucide-react";
 
 /**
@@ -57,10 +58,15 @@ const NAV: NavGroup[] = [
     items: [
       { label: "Console admin", href: "/admin", icon: Shield },
       { label: "Compétitions (admin)", href: "/admin/competitions", icon: Trophy },
+      { label: "Équipes (admin)", href: "/admin/equipes", icon: Users },
+      { label: "Matchs (admin)", href: "/admin/matchs", icon: CalendarDays },
       { label: "Joueurs (admin)", href: "/admin/joueurs", icon: UserCog },
       { label: "Hydra (admin)", href: "/admin/hydra", icon: Sparkles },
       { label: "Tiers (admin)", href: "/admin/tiers", icon: SlidersHorizontal },
       { label: "Tags (admin)", href: "/admin/tags", icon: Tags },
+      { label: "Fusion doublons", href: "/admin/fusion", icon: UserCog },
+      { label: "Validation compo", href: "/admin/validation", icon: ClipboardCheck },
+      { label: "Drifters", href: "/admin/drifters", icon: Shuffle },
     ],
   },
 ];

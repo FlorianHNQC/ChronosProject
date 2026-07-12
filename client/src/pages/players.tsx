@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserRound } from "lucide-react";
+import { useLocation } from "wouter";
 import type { Player } from "@shared/schema";
 
 /**
@@ -13,6 +14,7 @@ import type { Player } from "@shared/schema";
  */
 export function PlayersPage() {
   const [q, setQ] = useState("");
+  const [, navigate] = useLocation();
   const { data: players, isLoading, error } = useQuery<Player[]>({ queryKey: ["/api/players"] });
 
   const filtered = useMemo(() => {
@@ -27,7 +29,7 @@ export function PlayersPage() {
   }, [players, q]);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="w-full px-6 py-8">
       <div className="flex items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">Joueurs</h1>
         <div className="relative w-64 max-w-full">
@@ -55,7 +57,7 @@ export function PlayersPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filtered.map((p) => (
-          <Card key={p.id} className="flex items-center gap-3 p-3">
+          <Card key={p.id} onClick={() => navigate(`/joueurs/${p.id}`)} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/40">
             {p.avatarUrl ? (
               <img
                 src={p.avatarUrl}
