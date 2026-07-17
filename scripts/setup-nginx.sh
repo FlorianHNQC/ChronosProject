@@ -23,9 +23,14 @@ EMAIL="${2:-}"
 # Se placer à la racine du dépôt pour lire .env.
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Port d'écoute de l'app : lu depuis .env, défaut 5010.
-PORT="$(grep -oP '^PORT=\K.*' .env 2>/dev/null | tr -d '"' || true)"
+# Port d'écoute réel de l'app = celui que PM2 lance (ecosystem.config.cjs).
+# Fallback sur .env, puis 5010. On resynchronise ensuite .env pour éviter toute divergence.
+PORT="$(grep -oP 'PORT:\s*"\K[0-9]+' ecosystem.config.cjs 2>/dev/null | head -n1 || true)"
+[ -n "$PORT" ] || PORT="$(grep -oP '^PORT=\K[0-9]+' .env 2>/dev/null | head -n1 || true)"
 PORT="${PORT:-5010}"
+if [ -f .env ]; then
+  if grep -q '^PORT=' .env; then sed -i "s/^PORT=.*/PORT=${PORT}/" .env; else printf 'PORT=%s\n' "$PORT" >> .env; fi
+fi
 log "Domaine : $DOMAIN   |   App locale : 127.0.0.1:$PORT"
 
 # Vérif DNS : le domaine doit résoudre vers ce serveur (avertissement seulement).
