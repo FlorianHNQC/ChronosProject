@@ -19,9 +19,12 @@ sudo bash scripts/setup.sh
 
 # 2) Déploiement (et à chaque mise à jour) : pull + install + db:push + build + PM2
 bash scripts/deploy.sh
+
+# 3) Nginx + SSL (une seule fois) : reverse-proxy + certificat Let's Encrypt
+sudo bash scripts/setup-nginx.sh chronos.tondomaine.com toi@exemple.com
 ```
 
-Ensuite : importer les données legacy si besoin (section 5), puis configurer Nginx + SSL (section 8).
+Ensuite : importer les données legacy si besoin (section 5). La section 8 détaille Nginx/SSL à la main, en complément du script.
 Les sections ci-dessous détaillent chaque étape manuellement, en complément.
 
 ---
