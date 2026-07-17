@@ -27,3 +27,4 @@ replit.md
 .claude/
 vite.config.ts.*
 *.tar.gz
+/leaguebs_deploy

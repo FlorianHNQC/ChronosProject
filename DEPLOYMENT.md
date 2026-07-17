@@ -6,6 +6,26 @@ de reverse-proxy avec SSL.
 
 ---
 
+## Déploiement scripté (le plus rapide)
+
+Deux scripts automatisent tout (sauf Nginx/SSL, à faire une fois à la main) :
+
+```bash
+git clone <url_du_depot> chronos && cd chronos
+
+# 1) Provisionnement initial (une seule fois) : Node, Postgres, Nginx, PM2, base, .env
+sudo bash scripts/setup.sh
+#    -> note le mot de passe admin affiché, puis renseigne BRAWLSTARS_API_TOKEN dans .env
+
+# 2) Déploiement (et à chaque mise à jour) : pull + install + db:push + build + PM2
+bash scripts/deploy.sh
+```
+
+Ensuite : importer les données legacy si besoin (section 5), puis configurer Nginx + SSL (section 8).
+Les sections ci-dessous détaillent chaque étape manuellement, en complément.
+
+---
+
 ## 1. Prérequis (une fois par serveur)
 
 ```bash
@@ -118,13 +138,11 @@ sudo certbot --nginx -d chronos.exemple.com
 
 ## 9. Mises à jour
 
+Une seule commande — le script fait pull + install + db:push + build + redémarrage PM2 :
+
 ```bash
 cd /opt/chronos
-git pull
-npm ci
-npm run db:push        # si le schéma a changé
-npm run build
-pm2 restart chronos
+bash scripts/deploy.sh
 ```
 
 ---
