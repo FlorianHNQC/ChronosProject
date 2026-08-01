@@ -6,7 +6,7 @@ import {
 import {
   Trophy, Swords, Users, BarChart3, Sparkles, Shield, LayoutList,
   CalendarDays, Award, Home, UserCog, Tags, SlidersHorizontal,
-  ClipboardCheck, Shuffle,
+  ClipboardCheck, Shuffle, Wand2,
 } from "lucide-react";
 
 /**
@@ -37,6 +37,7 @@ const NAV: NavGroup[] = [
     label: "Hydra",
     items: [
       { label: "Classement (tiers)", href: "/hydra", icon: Sparkles },
+      { label: "Classement — v2", href: "/hydra-v2", icon: Wand2 },
     ],
   },
   {
@@ -87,8 +88,11 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
+                  // Comparaison par segment : sans cela /hydra-v2 allumerait aussi /hydra.
                   const active =
-                    item.href === "/" ? location === "/" : location.startsWith(item.href);
+                    item.href === "/"
+                      ? location === "/"
+                      : location === item.href || location.startsWith(item.href + "/");
                   const Icon = item.icon;
                   return (
                     <SidebarMenuItem key={item.href}>
