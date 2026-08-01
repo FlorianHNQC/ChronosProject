@@ -8,18 +8,49 @@ import { useToast } from "@/hooks/use-toast";
 import { Pencil } from "lucide-react";
 import type { HydraSection } from "@shared/schema";
 
-/** Rendu inline minimal : **gras** dans une ligne. */
-function inline(text: string, keyBase: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
-    p.startsWith("**") && p.endsWith("**") ? (
-      <strong key={`${keyBase}-${i}`}>{p.slice(2, -2)}</strong>
-    ) : (
-      <span key={`${keyBase}-${i}`}>{p}</span>
-    ),
-  );
+/**
+ * Rendu inline : **gras**, *italique* et liens [libellé](url) dans une ligne.
+ */
+function inline(text: string, keyBase: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const re = /(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(\*[^*]+\*)/g;
+  let last = 0;
+  let i = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) nodes.push(<span key={`${keyBase}-t${i}`}>{text.slice(last, m.index)}</span>);
+    const tok = m[0];
+    if (tok.startsWith("[")) {
+      const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok);
+      if (link) {
+        nodes.push(
+          <a
+            key={`${keyBase}-a${i}`}
+            href={link[2]}
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary underline underline-offset-2"
+          >
+            {link[1]}
+          </a>,
+        );
+      }
+    } else if (tok.startsWith("**")) {
+      nodes.push(<strong key={`${keyBase}-b${i}`}>{tok.slice(2, -2)}</strong>);
+    } else {
+      nodes.push(<em key={`${keyBase}-i${i}`}>{tok.slice(1, -1)}</em>);
+    }
+    last = m.index + tok.length;
+    i++;
+  }
+  if (last < text.length) nodes.push(<span key={`${keyBase}-e`}>{text.slice(last)}</span>);
+  return nodes;
 }
 
-/** Rendu texte enrichi léger : paragraphes (ligne vide), listes "- ", et **gras**. */
+/**
+ * Rendu texte enrichi léger : titres (`##`, `###`), paragraphes (ligne vide),
+ * listes `- `, et inline **gras** / *italique* / [liens](url).
+ */
 function RichText({ text }: { text: string }) {
   const lines = text.split("\n");
   const blocks: React.ReactNode[] = [];
@@ -59,6 +90,23 @@ function RichText({ text }: { text: string }) {
     if (line.trim() === "") {
       flushList();
       flushPara();
+    } else if (/^#{1,3}\s+/.test(line)) {
+      flushList();
+      flushPara();
+      const level = (line.match(/^#+/) as RegExpMatchArray)[0].length;
+      const content = line.replace(/^#+\s+/, "");
+      blocks.push(
+        <div
+          key={`h-${blocks.length}`}
+          className={
+            level <= 2
+              ? "font-bold text-base mt-3 mb-1"
+              : "font-semibold text-sm mt-2 mb-1 text-muted-foreground"
+          }
+        >
+          {inline(content, `h-${blocks.length}`)}
+        </div>,
+      );
     } else if (/^-\s+/.test(line)) {
       flushPara();
       list.push(line.replace(/^-\s+/, ""));
@@ -100,9 +148,13 @@ export function HydraSectionBlock({ section, isAdmin }: { section: HydraSection;
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={8}
-          placeholder="Contenu — sauts de ligne, listes « - », et **gras** pris en charge."
+          placeholder="Contenu…"
           className="font-mono text-xs"
         />
+        <p className="text-[11px] text-muted-foreground">
+          Formats : <code>**gras**</code>, <code>*italique*</code>, titres <code>## Titre</code>,
+          listes <code>- élément</code>, liens <code>[libellé](https://…)</code>, ligne vide = nouveau paragraphe.
+        </p>
         <div className="flex gap-2">
           <Button size="sm" disabled={save.isPending || !title.trim()} onClick={() => save.mutate()}>
             Enregistrer

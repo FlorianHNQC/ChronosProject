@@ -4,16 +4,13 @@ import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
-import { Search, UserRound, Sparkles } from "lucide-react";
+import { Search, UserRound, Sparkles, Wrench } from "lucide-react";
 import { tierForElo } from "@shared/tiers";
 import { useMe } from "@/hooks/use-me";
 import { HydraSectionBlock } from "@/components/hydra-section";
+import { HydraChangelog } from "@/components/hydra-changelog";
 import type { Player, Tier, HydraSection } from "@shared/schema";
 
-type ChangelogEntry = {
-  id: string; pseudo: string | null; oldElo: number | null; newElo: number | null;
-  comment: string | null; createdAt: string | null;
-};
 type PlayerTagRow = {
   playerId: string; tagId: string; code: string; label: string;
   family: "palmares" | "comportement"; color: string | null;
@@ -46,9 +43,8 @@ export function HydraPage() {
 
   const { data: tiers } = useQuery<Tier[]>({ queryKey: ["/api/tiers"] });
   const { data: players } = useQuery<Player[]>({ queryKey: ["/api/players"] });
-  const { data: changelog } = useQuery<ChangelogEntry[]>({ queryKey: ["/api/hydra/changelog"] });
   const { data: sections } = useQuery<HydraSection[]>({ queryKey: ["/api/hydra/sections"] });
-  const { isAdmin } = useMe();
+  const { isAdmin, isLoading: authLoading } = useMe();
   const { data: playerTags } = useQuery<PlayerTagRow[]>({ queryKey: ["/api/player-tags"] });
 
   const tagsByPlayer = useMemo(() => {
@@ -105,6 +101,29 @@ export function HydraPage() {
   const toggleTag = (id: string) =>
     setSelectedTags((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
+  // Page en maintenance : réservée aux administrateurs connectés.
+  if (authLoading) {
+    return <div className="w-full px-6 py-16 text-center text-sm text-muted-foreground">Chargement…</div>;
+  }
+  if (!isAdmin) {
+    return (
+      <div className="w-full px-6 py-16 flex justify-center">
+        <div className="max-w-md text-center border rounded-lg p-8">
+          <div className="flex justify-center mb-3">
+            <Wrench className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-xl font-bold mb-2">Hydra — en maintenance</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            Cette page est temporairement en maintenance. Elle n'est accessible qu'aux administrateurs connectés.
+          </p>
+          <a href="/login" className="inline-block text-sm font-medium text-primary underline underline-offset-2">
+            Connexion admin
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full px-6 py-8">
       <div className="flex items-center gap-2 mb-1">
@@ -127,19 +146,7 @@ export function HydraPage() {
         <AccordionItem value="changelog">
           <AccordionTrigger>Changelogs</AccordionTrigger>
           <AccordionContent>
-            {changelog && changelog.length > 0 ? (
-              <ul className="space-y-1.5">
-                {changelog.map((c) => (
-                  <li key={c.id} className="text-sm">
-                    <span className="font-medium">{c.pseudo ?? "?"}</span>{" "}
-                    <span className="text-muted-foreground">{c.oldElo ?? "—"} → {c.newElo ?? "—"}</span>
-                    {c.comment ? <span className="text-muted-foreground"> · {c.comment}</span> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <span className="text-muted-foreground">Aucune évolution enregistrée pour l'instant.</span>
-            )}
+            <HydraChangelog />
           </AccordionContent>
         </AccordionItem>
       </Accordion>

@@ -22,7 +22,7 @@ import { tierForElo } from "@shared/tiers";
 const BASE = 1000;
 
 export const eloEngine = {
-  async recompute(opts: { k?: number; competitionId?: string }): Promise<{ players: number; matches: number; k: number }> {
+  async recompute(opts: { k?: number; competitionId?: string; authorUserId?: string }): Promise<{ players: number; matches: number; k: number }> {
     const K = opts.k && opts.k > 0 ? opts.k : 24;
 
     const allPlayers = await db.select({ id: players.id, elo: players.elo }).from(players);
@@ -85,7 +85,7 @@ export const eloEngine = {
     const allTiers = await db.select().from(tiers);
 
     await db.transaction(async (tx) => {
-      const [batch] = await tx.insert(changelogBatches).values({ note: `Recalcul Elo (K=${K})` }).returning();
+      const [batch] = await tx.insert(changelogBatches).values({ note: `Recalcul Elo (K=${K})`, authorUserId: opts.authorUserId ?? null }).returning();
       for (const p of allPlayers) {
         const newElo = Math.round(cur.get(p.id) ?? BASE);
         const oldElo = prev.get(p.id) ?? BASE;

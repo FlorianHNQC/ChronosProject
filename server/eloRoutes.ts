@@ -12,7 +12,7 @@ export function registerEloRoutes(app: Express) {
       const competitionId = typeof req.body?.competitionId === "string" && req.body.competitionId
         ? req.body.competitionId
         : undefined;
-      const result = await eloEngine.recompute({ k, competitionId });
+      const result = await eloEngine.recompute({ k, competitionId, authorUserId: req.session.userId });
       res.json(result);
     } catch (e) {
       next(e);

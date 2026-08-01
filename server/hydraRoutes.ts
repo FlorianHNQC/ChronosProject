@@ -23,7 +23,7 @@ export function registerHydraRoutes(app: Express) {
       if (!Number.isFinite(elo)) {
         return res.status(400).json({ message: "Valeur d'Elo invalide." });
       }
-      const updated = await hydra.setPlayerElo(req.params.id, Math.round(elo), req.body?.comment);
+      const updated = await hydra.setPlayerElo(req.params.id, Math.round(elo), req.body?.comment, req.session.userId);
       if (!updated) return res.status(404).json({ message: "Joueur introuvable." });
       res.json(updated);
     } catch (e) {
@@ -35,6 +35,15 @@ export function registerHydraRoutes(app: Express) {
   app.get("/api/hydra/changelog", async (_req, res, next) => {
     try {
       res.json(await hydra.listChangelog());
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Changelog groupé par lot (date + auteur) pour la navigation par date.
+  app.get("/api/hydra/changelog/batches", async (_req, res, next) => {
+    try {
+      res.json(await hydra.listChangelogBatches());
     } catch (e) {
       next(e);
     }
