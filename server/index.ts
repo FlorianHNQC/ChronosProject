@@ -6,6 +6,7 @@ import { setupAuth, requireAdminWrites, seedAdmin } from "./auth";
 import { registerRoutes } from "./routes";
 import { registerHydraRoutes } from "./hydraRoutes";
 import { registerHydraAdminRoutes } from "./hydraAdminRoutes";
+import { registerHydraSectionsRoutes } from "./hydraSectionsRoutes";
 import { registerCompetitionsRoutes } from "./competitionsRoutes";
 import { registerTeamsRoutes } from "./teamsRoutes";
 import { registerMatchesRoutes } from "./matchesRoutes";
@@ -85,6 +86,7 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
   registerHydraRoutes(app);
   registerHydraAdminRoutes(app);
+  registerHydraSectionsRoutes(app);
   registerCompetitionsRoutes(app);
   registerTeamsRoutes(app);
   registerMatchesRoutes(app);

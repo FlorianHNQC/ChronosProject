@@ -6,7 +6,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Search, UserRound, Sparkles } from "lucide-react";
 import { tierForElo } from "@shared/tiers";
-import type { Player, Tier } from "@shared/schema";
+import { useMe } from "@/hooks/use-me";
+import { HydraSectionBlock } from "@/components/hydra-section";
+import type { Player, Tier, HydraSection } from "@shared/schema";
 
 type ChangelogEntry = {
   id: string; pseudo: string | null; oldElo: number | null; newElo: number | null;
@@ -45,6 +47,8 @@ export function HydraPage() {
   const { data: tiers } = useQuery<Tier[]>({ queryKey: ["/api/tiers"] });
   const { data: players } = useQuery<Player[]>({ queryKey: ["/api/players"] });
   const { data: changelog } = useQuery<ChangelogEntry[]>({ queryKey: ["/api/hydra/changelog"] });
+  const { data: sections } = useQuery<HydraSection[]>({ queryKey: ["/api/hydra/sections"] });
+  const { isAdmin } = useMe();
   const { data: playerTags } = useQuery<PlayerTagRow[]>({ queryKey: ["/api/player-tags"] });
 
   const tagsByPlayer = useMemo(() => {
@@ -112,30 +116,14 @@ export function HydraPage() {
       </p>
 
       <Accordion type="single" collapsible className="mb-6 border rounded-lg px-4">
-        <AccordionItem value="about">
-          <AccordionTrigger>À propos de Hydra</AccordionTrigger>
-          <AccordionContent>
-            Un outil d'organisation, pas un jugement de valeur : le tier sert à répartir le niveau pour des compétitions disputées.
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="tags">
-          <AccordionTrigger>Catégories et tags</AccordionTrigger>
-          <AccordionContent>
-            Palmarès (Champion…) et comportement (Nomade, Drifter actif…). Utilisez les filtres ci-dessous.
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="notes">
-          <AccordionTrigger>Notes (notation)</AccordionTrigger>
-          <AccordionContent>
-            Le tier est dérivé de l'Elo, piloté d'abord par les résultats. Seuils configurables.
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="criteria">
-          <AccordionTrigger>Critères</AccordionTrigger>
-          <AccordionContent>
-            <b>Joueurs</b> : ont déjà joué une compétition. <b>Rookie</b> : nouveaux venus (aucune compétition jouée). <b>Réserve</b> : inactifs depuis plus de {RESERVE_DAYS} jours.
-          </AccordionContent>
-        </AccordionItem>
+        {(sections ?? []).map((s) => (
+          <AccordionItem key={s.key} value={s.key}>
+            <AccordionTrigger>{s.title}</AccordionTrigger>
+            <AccordionContent>
+              <HydraSectionBlock section={s} isAdmin={isAdmin} />
+            </AccordionContent>
+          </AccordionItem>
+        ))}
         <AccordionItem value="changelog">
           <AccordionTrigger>Changelogs</AccordionTrigger>
           <AccordionContent>

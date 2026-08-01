@@ -647,5 +647,18 @@ export type PlayerSeasonStats = {
   winRate: number;
 };
 
+// Sections éditoriales d'Hydra (À propos, Catégories et tags, Notes, Critères…).
+// Contenu rédactionnel modifiable en ligne par un admin ; rendu dans les accordéons.
+export const hydraSections = pgTable("hydra_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(), // about | tags | notes | criteria
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  orderIndex: integer("order_index").notNull().default(0),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertHydraSectionSchema = createInsertSchema(hydraSections).omit({ id: true, updatedAt: true });
+export type HydraSection = typeof hydraSections.$inferSelect;
+
 // Mode Hydra dérivé (non stocké) — calculé à partir des signaux du joueur.
 export type HydraMode = "joueurs" | "rookie" | "reserve";
