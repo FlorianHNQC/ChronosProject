@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Bracket } from "@/components/bracket";
-import { Trophy } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
+import { CompetitionSelect } from "@/components/competition-select";
+import { EmptyState } from "@/components/empty-state";
+import { Trophy, LayoutList } from "lucide-react";
 import type { Competition, PlayoffSeries, Team } from "@shared/schema";
 
 /**
@@ -23,7 +27,7 @@ export function PlayoffsPage() {
     enabled: !!competitionId,
     queryFn: async () => (await apiRequest("GET", `/api/teams?competitionId=${competitionId}`)).json(),
   });
-  const { data: series } = useQuery<PlayoffSeries[]>({
+  const { data: series, isLoading: seriesLoading } = useQuery<PlayoffSeries[]>({
     queryKey: ["/api/playoffs", competitionId],
     enabled: !!competitionId,
     queryFn: async () => (await apiRequest("GET", `/api/playoffs?competitionId=${competitionId}`)).json(),
@@ -36,16 +40,29 @@ export function PlayoffsPage() {
       id ? m.get(id) ?? label ?? "?" : label ?? "À déterminer";
   }, [teams]);
 
+  const hasSeries = (series ?? []).length > 0;
+
   return (
     <div className="w-full px-6 py-8">
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Trophy className="h-6 w-6 text-primary" /> Playoffs</h1>
-        <select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
-          {(comps ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
+      <PageHeader
+        title="Playoffs"
+        icon={Trophy}
+        actions={
+          <CompetitionSelect competitions={comps ?? []} value={competitionId} onValueChange={setCompetitionId} />
+        }
+      />
 
-      <Bracket series={series ?? []} teamName={teamName} />
+      {competitionId && seriesLoading ? (
+        <Skeleton className="h-72 w-full" />
+      ) : !hasSeries ? (
+        <EmptyState
+          icon={LayoutList}
+          title="Pas encore de bracket"
+          description="La grille des playoffs s'affichera ici une fois les séries initialisées pour cette compétition."
+        />
+      ) : (
+        <Bracket series={series ?? []} teamName={teamName} />
+      )}
     </div>
   );
 }

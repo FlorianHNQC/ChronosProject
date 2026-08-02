@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn } from "lucide-react";
+import { LogIn, ArrowLeft } from "lucide-react";
 
 export function LoginPage() {
   const [, navigate] = useLocation();
@@ -29,17 +29,38 @@ export function LoginPage() {
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto px-6 py-20">
-      <Card className="p-6">
-        <h1 className="text-xl font-bold mb-4 flex items-center gap-2"><LogIn className="h-5 w-5" /> Connexion admin</h1>
-        <form onSubmit={submit} className="space-y-3">
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" autoComplete="username" />
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe" autoComplete="current-password" />
-          <Button type="submit" className="w-full" disabled={busy || !email || !password}>
-            {busy ? "Connexion…" : "Se connecter"}
-          </Button>
-        </form>
-      </Card>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-primary/20 blur-[120px]" />
+        <div className="absolute -bottom-40 -right-24 h-[400px] w-[400px] rounded-full bg-primary/10 blur-[110px]" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm animate-fade-in-up">
+        <div className="mb-8 flex justify-center">
+          <img src="/chronos-logo.png" alt="CHRONOS" className="h-20 w-auto" />
+        </div>
+
+        <Card className="p-6">
+          <h1 className="flex items-center gap-2 text-xl font-bold italic">
+            <LogIn className="h-5 w-5 not-italic text-primary" /> Connexion admin
+          </h1>
+          <p className="mb-4 mt-1 text-sm text-muted-foreground">Accès réservé à l'administration Chronos.</p>
+          <form onSubmit={submit} className="space-y-3">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" autoComplete="username" />
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe" autoComplete="current-password" />
+            <Button type="submit" className="w-full gap-2" disabled={busy || !email || !password}>
+              <LogIn className="h-4 w-4" />
+              {busy ? "Connexion…" : "Se connecter"}
+            </Button>
+          </form>
+        </Card>
+
+        <div className="mt-4 text-center">
+          <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Retour au site
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

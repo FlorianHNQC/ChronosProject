@@ -2,18 +2,26 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
+import { CompetitionSelect } from "@/components/competition-select";
+import { EmptyState } from "@/components/empty-state";
+import { Pager } from "@/components/pager";
 import { useLocation } from "wouter";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Trophy } from "lucide-react";
 import type { Competition, Match, Team } from "@shared/schema";
 
-const STATUS: Record<string, { label: string; color: string }> = {
-  upcoming: { label: "À venir", color: "#8B93A7" },
-  live: { label: "En direct", color: "#E23B3B" },
-  completed: { label: "Terminé", color: "#2E7D32" },
-  cancelled: { label: "Annulé", color: "#B45309" },
+const STATUS: Record<string, { label: string; className: string }> = {
+  upcoming: { label: "À venir", className: "bg-muted text-muted-foreground" },
+  live: { label: "En direct", className: "bg-destructive text-destructive-foreground border-transparent" },
+  completed: { label: "Terminé", className: "bg-primary/15 text-primary border-primary/25" },
+  cancelled: { label: "Annulé", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25" },
 };
 
 const DAY_MS = 86400000;
+const PAST_PAGE = 20;
+
 function dayKey(d: string | Date | null): string {
   if (!d) return "0000-00-00";
   const dt = new Date(d);
@@ -25,12 +33,27 @@ function dayLabel(key: string): string {
   return dt.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
+/** Regroupe une liste déjà triée par jour, en préservant l'ordre d'apparition. */
+function groupOrdered(list: Match[]): [string, Match[]][] {
+  const out: [string, Match[]][] = [];
+  const idx = new Map<string, number>();
+  for (const m of list) {
+    const k = dayKey(m.datetime);
+    let i = idx.get(k);
+    if (i === undefined) { i = out.length; idx.set(k, i); out.push([k, []]); }
+    out[i][1].push(m);
+  }
+  return out;
+}
+
 /**
  * Calendrier & résultats — agenda regroupé par date (à venir puis passés).
+ * Les matchs passés (potentiellement des centaines) sont paginés.
  */
 export function MatchesPage() {
   const { data: comps } = useQuery<Competition[]>({ queryKey: ["/api/competitions"] });
   const [competitionId, setCompetitionId] = useState("");
+  const [page, setPage] = useState(1);
   const [, navigate] = useLocation();
 
   useEffect(() => {
@@ -44,7 +67,7 @@ export function MatchesPage() {
     enabled: !!competitionId,
     queryFn: async () => (await apiRequest("GET", `/api/teams?competitionId=${competitionId}`)).json(),
   });
-  const { data: matches } = useQuery<Match[]>({
+  const { data: matches, isLoading: matchesLoading } = useQuery<Match[]>({
     queryKey: ["/api/matches", competitionId],
     enabled: !!competitionId,
     queryFn: async () => (await apiRequest("GET", `/api/matches?competitionId=${competitionId}`)).json(),
@@ -56,7 +79,7 @@ export function MatchesPage() {
     return (id: string | null) => (id ? m.get(id) ?? "?" : "?");
   }, [teams]);
 
-  const { upcoming, past } = useMemo(() => {
+  const { upcomingGroups, pastFlat } = useMemo(() => {
     const now = Date.now();
     const up: Match[] = [];
     const pa: Match[] = [];
@@ -65,30 +88,44 @@ export function MatchesPage() {
         (m.datetime ? new Date(m.datetime).getTime() < now - DAY_MS : true);
       (isPast ? pa : up).push(m);
     }
-    const groupBy = (list: Match[], dir: 1 | -1) => {
-      const g = new Map<string, Match[]>();
-      for (const m of list) {
-        const k = dayKey(m.datetime);
-        if (!g.has(k)) g.set(k, []);
-        g.get(k)!.push(m);
-      }
-      return Array.from(g.entries()).sort((a, b) => (a[0] < b[0] ? -dir : a[0] > b[0] ? dir : 0));
-    };
-    return { upcoming: groupBy(up, 1), past: groupBy(pa, -1) };
+    up.sort((a, b) => { const ka = dayKey(a.datetime), kb = dayKey(b.datetime); return ka < kb ? -1 : ka > kb ? 1 : 0; });
+    pa.sort((a, b) => { const ka = dayKey(a.datetime), kb = dayKey(b.datetime); return ka < kb ? 1 : ka > kb ? -1 : 0; });
+    return { upcomingGroups: groupOrdered(up), pastFlat: pa };
   }, [matches]);
+
+  useEffect(() => setPage(1), [competitionId]);
+  const pastPageCount = Math.max(1, Math.ceil(pastFlat.length / PAST_PAGE));
+  const safePage = Math.min(page, pastPageCount);
+  const pastGroups = useMemo(
+    () => groupOrdered(pastFlat.slice((safePage - 1) * PAST_PAGE, safePage * PAST_PAGE)),
+    [pastFlat, safePage],
+  );
 
   const renderRow = (m: Match) => {
     const st = STATUS[m.status ?? "upcoming"] ?? STATUS.upcoming;
     const done = m.status === "completed";
+    const hasScore = m.scoreHome != null && m.scoreAway != null;
+    const homeWon = done && m.winnerId != null && m.winnerId === m.teamHomeId;
+    const awayWon = done && m.winnerId != null && m.winnerId === m.teamAwayId;
+    const nameCls = (won: boolean, lost: boolean) =>
+      won ? "font-semibold text-primary" : lost ? "text-muted-foreground" : "font-medium";
     return (
-      <Card key={m.id} onClick={() => navigate(`/matchs/${m.id}`)} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/40">
-        <span className="text-xs px-2 py-0.5 rounded text-white shrink-0" style={{ backgroundColor: st.color }}>{st.label}</span>
-        <div className="flex-1 flex items-center justify-center gap-3 min-w-0">
-          <span className="font-medium truncate text-right flex-1">{teamName(m.teamHomeId)}</span>
-          <span className="font-mono text-sm shrink-0">{done ? `${m.scoreHome ?? 0} – ${m.scoreAway ?? 0}` : "vs"}</span>
-          <span className="font-medium truncate flex-1">{teamName(m.teamAwayId)}</span>
+      <Card key={m.id} onClick={() => navigate(`/matchs/${m.id}`)} className="flex cursor-pointer items-center gap-3 p-3 hover-elevate">
+        <Badge variant="outline" className={`shrink-0 ${st.className}`}>{st.label}</Badge>
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-3">
+          <span className={`flex-1 truncate text-right ${nameCls(homeWon, awayWon)}`}>{teamName(m.teamHomeId)}</span>
+          <span className="flex shrink-0 items-center justify-center">
+            {hasScore ? (
+              <span className="font-mono text-sm">{m.scoreHome} – {m.scoreAway}</span>
+            ) : done && (homeWon || awayWon) ? (
+              <Trophy className="h-4 w-4 text-primary" />
+            ) : (
+              <span className="text-sm text-muted-foreground">vs</span>
+            )}
+          </span>
+          <span className={`flex-1 truncate ${nameCls(awayWon, homeWon)}`}>{teamName(m.teamAwayId)}</span>
         </div>
-        <div className="text-xs text-muted-foreground text-right shrink-0 w-24">{m.gameMode ?? ""}</div>
+        <div className="w-24 shrink-0 text-right text-xs text-muted-foreground">{m.gameMode ?? ""}</div>
       </Card>
     );
   };
@@ -96,37 +133,54 @@ export function MatchesPage() {
   const renderAgenda = (groups: [string, Match[]][]) =>
     groups.map(([key, list]) => (
       <div key={key} className="mb-5">
-        <div className="text-sm font-semibold text-primary capitalize mb-2 flex items-center gap-2">
-          <CalendarDays className="h-4 w-4" /> {dayLabel(key)} <span className="text-muted-foreground font-normal">· {list.length}</span>
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold capitalize text-primary">
+          <CalendarDays className="h-4 w-4" /> {dayLabel(key)} <span className="font-normal text-muted-foreground">· {list.length}</span>
         </div>
         <div className="space-y-2">{list.map(renderRow)}</div>
       </div>
     ));
 
+  const hasMatches = (matches ?? []).length > 0;
+
   return (
     <div className="w-full px-6 py-8">
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <h1 className="text-2xl font-bold">Calendrier & résultats</h1>
-        <select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
-          {(comps ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
+      <PageHeader
+        title="Calendrier & résultats"
+        icon={CalendarDays}
+        actions={
+          <CompetitionSelect competitions={comps ?? []} value={competitionId} onValueChange={setCompetitionId} />
+        }
+      />
 
-      {(matches ?? []).length === 0 && (
-        <p className="text-sm text-muted-foreground">Aucun match pour cette compétition.</p>
-      )}
-
-      {upcoming.length > 0 && (
-        <section className="mb-8">
-          <h2 className="font-semibold mb-3">À venir</h2>
-          {renderAgenda(upcoming)}
-        </section>
-      )}
-      {past.length > 0 && (
-        <section>
-          <h2 className="font-semibold mb-3">Résultats & matchs passés</h2>
-          {renderAgenda(past)}
-        </section>
+      {competitionId && matchesLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+        </div>
+      ) : !hasMatches ? (
+        <EmptyState
+          icon={CalendarDays}
+          title="Aucun match pour cette compétition"
+          description="Le calendrier et les résultats apparaîtront ici une fois les matchs programmés."
+        />
+      ) : (
+        <>
+          {upcomingGroups.length > 0 && (
+            <section className="mb-8 animate-fade-in-up animate-delay-100">
+              <h2 className="mb-3 font-semibold">À venir</h2>
+              {renderAgenda(upcomingGroups)}
+            </section>
+          )}
+          {pastFlat.length > 0 && (
+            <section className="animate-fade-in-up animate-delay-200">
+              <h2 className="mb-3 font-semibold">
+                Résultats & matchs passés
+                <span className="ml-2 font-normal text-muted-foreground">· {pastFlat.length}</span>
+              </h2>
+              {renderAgenda(pastGroups)}
+              <Pager page={safePage} pageCount={pastPageCount} onPageChange={setPage} />
+            </section>
+          )}
+        </>
       )}
     </div>
   );

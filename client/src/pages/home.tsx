@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
+import { Pager } from "@/components/pager";
 import {
   Sparkles, CalendarDays, BarChart3, Users, Trophy, UserRound,
   Swords, Award, Flag, Medal, Rocket, ArrowRight, History,
@@ -79,9 +80,16 @@ export function HomePage() {
     for (const m of done) {
       const d = m.datetime ? new Date(m.datetime) : m.createdAt ? new Date(m.createdAt) : null;
       if (!d) continue;
+      const hasScore = m.scoreHome != null && m.scoreAway != null;
+      const loserId = m.winnerId === m.teamHomeId ? m.teamAwayId : m.teamHomeId;
+      const title = hasScore
+        ? `${teamName(m.teamHomeId)} ${m.scoreHome}–${m.scoreAway} ${teamName(m.teamAwayId)}`
+        : m.winnerId
+          ? `${teamName(m.winnerId)} bat ${teamName(loserId)}`
+          : `${teamName(m.teamHomeId)} vs ${teamName(m.teamAwayId)}`;
       evs.push({
         id: `res-${m.id}`, date: d, icon: Swords, color: "#10b981",
-        title: `${teamName(m.teamHomeId)} ${m.scoreHome ?? 0}–${m.scoreAway ?? 0} ${teamName(m.teamAwayId)}`,
+        title,
         subtitle: compName(m.competitionId) || undefined, href: `/matchs/${m.id}`,
       });
     }
@@ -99,16 +107,23 @@ export function HomePage() {
       });
     }
 
-    return evs.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 16);
+    return evs.sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [comps, awards, matches, teamName, compName]);
 
   const now = Date.now();
 
+  // Pagination du fil d'actualité (évite une page interminable).
+  const FEED_PAGE = 6;
+  const [feedPage, setFeedPage] = useState(1);
+  const feedPageCount = Math.max(1, Math.ceil(events.length / FEED_PAGE));
+  const safeFeedPage = Math.min(feedPage, feedPageCount);
+  const feedSlice = events.slice((safeFeedPage - 1) * FEED_PAGE, safeFeedPage * FEED_PAGE);
+
   return (
     <div className="w-full px-6 py-10 max-w-6xl mx-auto">
       {/* En-tête */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-extrabold tracking-tight text-primary">CHRONOS</h1>
+      <div className="mb-8 animate-fade-in-up">
+        <h1 className="text-4xl font-extrabold italic tracking-tight text-primary">CHRONOS</h1>
         <p className="text-muted-foreground mt-1">Plateforme de la scène compétitive Brawl Stars.</p>
         <div className="flex flex-wrap gap-2 mt-4 text-sm">
           <span className="px-3 py-1 rounded-md bg-muted">{players?.length ?? 0} joueurs</span>
@@ -123,7 +138,7 @@ export function HomePage() {
       </div>
 
       {/* Raccourcis communauté */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-12 animate-fade-in-up animate-delay-100">
         {SHORTCUTS.map((s) => (
           <Link key={s.href} href={s.href}>
             <Card className="group p-4 h-full flex items-start gap-3 hover:bg-muted/40 hover:border-primary/40 transition-colors cursor-pointer">
@@ -141,14 +156,15 @@ export function HomePage() {
       </div>
 
       {/* Timeline d'événements */}
-      <h2 className="font-semibold mb-4 flex items-center gap-2">
+      <h2 className="font-semibold mb-4 flex items-center gap-2 animate-fade-in-up animate-delay-200">
         <History className="h-5 w-5 text-primary" /> Fil d'actualité
       </h2>
       {events.length === 0 ? (
         <p className="text-sm text-muted-foreground">Aucun événement pour l'instant.</p>
       ) : (
-        <ol className="relative border-l border-border ml-3">
-          {events.map((e) => {
+        <>
+        <ol className="relative border-l border-border ml-3 animate-fade-in-up animate-delay-300">
+          {feedSlice.map((e) => {
             const future = e.date.getTime() > now;
             return (
               <li key={e.id} className="mb-5 ml-6">
@@ -176,6 +192,8 @@ export function HomePage() {
             );
           })}
         </ol>
+        <Pager page={safeFeedPage} pageCount={feedPageCount} onPageChange={setFeedPage} />
+        </>
       )}
     </div>
   );

@@ -4,68 +4,47 @@ import {
   SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import {
-  Trophy, Swords, Users, BarChart3, Sparkles, Shield, LayoutList,
-  CalendarDays, Award, Home, UserCog, Tags, SlidersHorizontal,
-  ClipboardCheck, Shuffle, Wand2,
+  Trophy, Users, Shield, CalendarDays, UserCog, Tags, SlidersHorizontal,
+  ClipboardCheck, Shuffle, Sparkles, ExternalLink,
 } from "lucide-react";
 
 /**
- * Navigation latérale unique et groupée (§10 du CDC).
- *
- * Objectif : régler la découvrabilité — sur leaguebs et statsbs, de nombreuses
- * pages n'étaient accessibles que par URL directe. Ici, tout ce qui est destiné
- * à un rôle apparaît dans une section de la barre latérale.
- *
- * FONDATION : les routes pointent vers des pages placeholder ; elles seront
- * remplacées par les vraies pages au fil des incréments.
+ * Navigation latérale de l'espace d'administration (dashboard).
+ * Les pages publiques utilisent l'en-tête horizontal (voir public-header.tsx) ;
+ * la sidebar est réservée à la console admin.
  */
-
 type NavItem = { label: string; href: string; icon: React.ComponentType<{ className?: string }> };
 type NavGroup = { label: string; items: NavItem[] };
 
 const NAV: NavGroup[] = [
   {
-    label: "Compétitions",
+    label: "Tableau de bord",
     items: [
-      { label: "Accueil", href: "/", icon: Home },
-      { label: "Ligue & tournois", href: "/competitions", icon: Trophy },
-      { label: "Calendrier", href: "/calendrier", icon: CalendarDays },
-      { label: "Playoffs", href: "/playoffs", icon: LayoutList },
-    ],
-  },
-  {
-    label: "Hydra",
-    items: [
-      { label: "Classement (tiers)", href: "/hydra", icon: Sparkles },
-      { label: "Classement — v2", href: "/hydra-v2", icon: Wand2 },
-    ],
-  },
-  {
-    label: "Équipes & Joueurs",
-    items: [
-      { label: "Équipes", href: "/equipes", icon: Users },
-      { label: "Joueurs", href: "/joueurs", icon: Swords },
-    ],
-  },
-  {
-    label: "Statistiques",
-    items: [
-      { label: "Classements de stats", href: "/stats", icon: BarChart3 },
-      { label: "Récompenses", href: "/recompenses", icon: Award },
-    ],
-  },
-  {
-    label: "Administration",
-    items: [
+      { label: "Voir le site", href: "/", icon: ExternalLink },
       { label: "Console admin", href: "/admin", icon: Shield },
-      { label: "Compétitions (admin)", href: "/admin/competitions", icon: Trophy },
-      { label: "Équipes (admin)", href: "/admin/equipes", icon: Users },
-      { label: "Matchs (admin)", href: "/admin/matchs", icon: CalendarDays },
-      { label: "Joueurs (admin)", href: "/admin/joueurs", icon: UserCog },
-      { label: "Hydra (admin)", href: "/admin/hydra", icon: Sparkles },
-      { label: "Tiers (admin)", href: "/admin/tiers", icon: SlidersHorizontal },
-      { label: "Tags (admin)", href: "/admin/tags", icon: Tags },
-      { label: "Fusion doublons", href: "/admin/fusion", icon: UserCog },
+    ],
+  },
+  {
+    label: "Gestion",
+    items: [
+      { label: "Compétitions", href: "/admin/competitions", icon: Trophy },
+      { label: "Équipes", href: "/admin/equipes", icon: Users },
+      { label: "Matchs", href: "/admin/matchs", icon: CalendarDays },
+      { label: "Joueurs", href: "/admin/joueurs", icon: UserCog },
+    ],
+  },
+  {
+    label: "Classement",
+    items: [
+      { label: "Hydra", href: "/admin/hydra", icon: Sparkles },
+      { label: "Tiers", href: "/admin/tiers", icon: SlidersHorizontal },
+      { label: "Tags", href: "/admin/tags", icon: Tags },
+    ],
+  },
+  {
+    label: "Outils",
+    items: [
+      { label: "Fusion doublons", href: "/admin/fusion", icon: Shuffle },
       { label: "Validation compo", href: "/admin/validation", icon: ClipboardCheck },
       { label: "Drifters", href: "/admin/drifters", icon: Shuffle },
     ],
@@ -77,8 +56,8 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-2 px-2 py-3">
-          <span className="text-xl font-bold tracking-tight text-primary">CHRONOS</span>
+        <Link href="/" className="flex items-center justify-center px-2 py-3">
+          <img src="/chronos-logo.png" alt="CHRONOS" className="h-14 w-auto max-w-full" />
         </Link>
       </SidebarHeader>
       <SidebarContent>
@@ -88,11 +67,12 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
-                  // Comparaison par segment : sans cela /hydra-v2 allumerait aussi /hydra.
                   const active =
                     item.href === "/"
-                      ? location === "/"
-                      : location === item.href || location.startsWith(item.href + "/");
+                      ? false
+                      : item.href === "/admin"
+                        ? location === "/admin"
+                        : location === item.href || location.startsWith(item.href + "/");
                   const Icon = item.icon;
                   return (
                     <SidebarMenuItem key={item.href}>
