@@ -125,8 +125,8 @@ export const players = pgTable("players", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   pseudo: text("pseudo").notNull(),
   role: text("role"),
-  teamId: varchar("team_id").references(() => teams.id),
-  isCaptain: boolean("is_captain").default(false),
+  // NB : l'appartenance d'équipe et la capitainerie sont PAR compétition —
+  // elles vivent dans `team_players` (roster). Pas de team/capitaine global ici.
   isActive: boolean("is_active").default(true),
   avatarUrl: text("avatar_url"),
 
@@ -495,7 +495,6 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").default("public"), // public | player | moderator | admin
-  teamId: varchar("team_id").references(() => teams.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
