@@ -5,11 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Pager } from "@/components/pager";
 import {
   Sparkles, CalendarDays, BarChart3, Users, Trophy, UserRound,
-  Swords, Award, Flag, Medal, Rocket, ArrowRight, History,
+  Swords, Flag, Medal, Rocket, ArrowRight, History,
 } from "lucide-react";
 import type { Competition, Player, Match, Team } from "@shared/schema";
-
-type AwardRow = { id: string; label: string; pseudo: string | null; avatarUrl: string | null; justification: string | null };
 
 /** Raccourcis vers les pages de la communauté (Hydra = simple raccourci, pas de classement ici). */
 const SHORTCUTS = [
@@ -20,7 +18,6 @@ const SHORTCUTS = [
   { href: "/equipes", label: "Équipes", desc: "Rosters", icon: Users },
   { href: "/joueurs", label: "Joueurs", desc: "Annuaire", icon: UserRound },
   { href: "/stats", label: "Statistiques", desc: "Classements & agrégats", icon: BarChart3 },
-  { href: "/recompenses", label: "Récompenses", desc: "Palmarès", icon: Award },
 ];
 
 type Ev = {
@@ -42,7 +39,6 @@ export function HomePage() {
   const { data: comps } = useQuery<Competition[]>({ queryKey: ["/api/competitions"] });
   const { data: teams } = useQuery<Team[]>({ queryKey: ["/api/teams"] });
   const { data: matches } = useQuery<Match[]>({ queryKey: ["/api/matches"] });
-  const { data: awards } = useQuery<{ weekly: AwardRow[]; season: AwardRow[] }>({ queryKey: ["/api/awards"] });
 
   const teamName = useMemo(() => {
     const m = new Map((teams ?? []).map((t) => [t.id, t.name]));
@@ -64,12 +60,6 @@ export function HomePage() {
         evs.push({ id: `comp-new-${c.id}`, date: new Date(c.createdAt), icon: Rocket, color: "#6366f1", title: "Compétition lancée", subtitle: c.name, href: "/competitions" });
       if (c.closedAt)
         evs.push({ id: `comp-close-${c.id}`, date: new Date(c.closedAt), icon: Flag, color: "#ef4444", title: "Compétition clôturée", subtitle: c.name, href: "/competitions" });
-    }
-
-    for (const a of awards?.weekly ?? []) {
-      const d = a.label ? new Date(a.label) : null;
-      if (d && !isNaN(d.getTime()))
-        evs.push({ id: `wk-${a.id}`, date: d, icon: Award, color: "#f59e0b", title: "Joueur de la semaine", subtitle: a.pseudo ?? undefined, href: "/recompenses" });
     }
 
     // Résultats récents (10 derniers matchs terminés)
@@ -108,7 +98,7 @@ export function HomePage() {
     }
 
     return evs.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [comps, awards, matches, teamName, compName]);
+  }, [comps, matches, teamName, compName]);
 
   const now = Date.now();
 

@@ -12,16 +12,15 @@ async function fetchMe(): Promise<Me> {
   return res.json();
 }
 
+// MVP : la navigation publique tourne autour de la compétition. Calendrier /
+// Playoffs / Équipes / Stats / Récompenses ne sont plus globaux — on y accède en
+// ENTRANT dans une compétition (hub /competitions/:id). Restent au global :
+// Accueil, Compétitions, Classement (Hydra, transverse) et Joueurs (annuaire).
 const NAV: { title: string; url: string }[] = [
   { title: "Accueil", url: "/" },
   { title: "Compétitions", url: "/competitions" },
-  { title: "Calendrier", url: "/calendrier" },
-  { title: "Playoffs", url: "/playoffs" },
   { title: "Classement", url: "/hydra" },
-  { title: "Équipes", url: "/equipes" },
   { title: "Joueurs", url: "/joueurs" },
-  { title: "Stats", url: "/stats" },
-  { title: "Récompenses", url: "/recompenses" },
 ];
 
 /**
@@ -66,7 +65,7 @@ export function PublicHeader() {
               <Button
                 variant="ghost"
                 size="sm"
-                className={`font-medium ${isActive(item.url) ? "text-primary" : "text-muted-foreground"}`}
+                className={`text-sm font-medium ${isActive(item.url) ? "text-primary" : "text-muted-foreground"}`}
               >
                 {item.title}
               </Button>

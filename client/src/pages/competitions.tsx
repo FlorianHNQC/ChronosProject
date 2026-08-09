@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 function CompetitionCard({ c, archived = false }: { c: Competition; archived?: boolean }) {
   return (
+    <Link href={`/competitions/${c.id}`} className="block">
     <Card className={`p-4 hover-elevate ${archived ? "opacity-90" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -36,6 +38,7 @@ function CompetitionCard({ c, archived = false }: { c: Competition; archived?: b
         </div>
       ) : null}
     </Card>
+    </Link>
   );
 }
 

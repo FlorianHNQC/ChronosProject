@@ -35,18 +35,19 @@ const PAGE_SIZE = 25;
 /**
  * Classements de statistiques par joueur (agrégés depuis match_player_stats).
  */
-export function StatsPage() {
+export function StatsPage({ competitionId: fixedId }: { competitionId?: string } = {}) {
   const { data: comps } = useQuery<Competition[]>({ queryKey: ["/api/competitions"] });
-  const [competitionId, setCompetitionId] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const competitionId = fixedId ?? selectedId;
   const [sortKey, setSortKey] = useState<keyof PlayerAgg>("avgNoteFinale");
   const [page, setPage] = useState(1);
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    if (competitionId || !comps || comps.length === 0) return;
+    if (fixedId || selectedId || !comps || comps.length === 0) return;
     const active = comps.find((c) => c.status === "active") ?? comps[0];
-    if (active) setCompetitionId(active.id);
-  }, [comps, competitionId]);
+    if (active) setSelectedId(active.id);
+  }, [comps, selectedId, fixedId]);
 
   const { data: stats, isLoading } = useQuery<PlayerAgg[]>({
     queryKey: ["/api/stats/season", competitionId],
@@ -93,7 +94,9 @@ export function StatsPage() {
         icon={BarChart3}
         actions={
           <>
-            <CompetitionSelect competitions={comps ?? []} value={competitionId} onValueChange={setCompetitionId} />
+            {!fixedId && (
+              <CompetitionSelect competitions={comps ?? []} value={selectedId} onValueChange={setSelectedId} />
+            )}
             <Select value={sortKey} onValueChange={(v) => setSortKey(v as keyof PlayerAgg)}>
               <SelectTrigger className="h-9 w-[150px]">
                 <SelectValue placeholder="Trier par" />

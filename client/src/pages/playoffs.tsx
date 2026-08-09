@@ -12,15 +12,16 @@ import type { Competition, PlayoffSeries, Team } from "@shared/schema";
 /**
  * Playoffs d'une compétition, affichés en grille (bracket).
  */
-export function PlayoffsPage() {
+export function PlayoffsPage({ competitionId: fixedId }: { competitionId?: string } = {}) {
   const { data: comps } = useQuery<Competition[]>({ queryKey: ["/api/competitions"] });
-  const [competitionId, setCompetitionId] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const competitionId = fixedId ?? selectedId;
 
   useEffect(() => {
-    if (competitionId || !comps || comps.length === 0) return;
+    if (fixedId || selectedId || !comps || comps.length === 0) return;
     const pick = comps.find((c) => c.status === "active") ?? comps.find((c) => c.status === "archived") ?? comps[0];
-    if (pick) setCompetitionId(pick.id);
-  }, [comps, competitionId]);
+    if (pick) setSelectedId(pick.id);
+  }, [comps, selectedId, fixedId]);
 
   const { data: teams } = useQuery<Team[]>({
     queryKey: ["/api/teams", competitionId],
@@ -48,7 +49,9 @@ export function PlayoffsPage() {
         title="Playoffs"
         icon={Trophy}
         actions={
-          <CompetitionSelect competitions={comps ?? []} value={competitionId} onValueChange={setCompetitionId} />
+          fixedId ? undefined : (
+            <CompetitionSelect competitions={comps ?? []} value={selectedId} onValueChange={setSelectedId} />
+          )
         }
       />
 

@@ -18,11 +18,11 @@ import { PlayerProfilePage } from "@/pages/player-profile";
 import { HydraPage } from "@/pages/hydra";
 import { HydraV2Page } from "@/pages/hydra-v2";
 import { CompetitionsPage } from "@/pages/competitions";
+import { CompetitionHubPage } from "@/pages/competition-hub";
 import { TeamsPage } from "@/pages/teams";
 import { MatchesPage } from "@/pages/matches";
 import { MatchDetailPage } from "@/pages/match-detail";
 import { PlayoffsPage } from "@/pages/playoffs";
-import { AwardsPage } from "@/pages/awards";
 import { StatsPage } from "@/pages/stats";
 import { LoginPage } from "@/pages/login";
 import { PlayersAdminPage } from "@/pages/admin/players-admin";
@@ -140,17 +140,22 @@ function PublicRouter() {
     <PublicLayout>
       <Switch>
         <Route path="/" component={HomePage} />
+        <Route path="/competitions/:id/:tab">
+          {(p) => <CompetitionHubPage id={p.id} tab={p.tab} />}
+        </Route>
+        <Route path="/competitions/:id">
+          {(p) => <CompetitionHubPage id={p.id} tab="" />}
+        </Route>
         <Route path="/competitions" component={CompetitionsPage} />
-        <Route path="/calendrier" component={MatchesPage} />
+        <Route path="/calendrier">{() => <MatchesPage />}</Route>
         <Route path="/matchs/:id" component={MatchDetailPage} />
-        <Route path="/playoffs" component={PlayoffsPage} />
+        <Route path="/playoffs">{() => <PlayoffsPage />}</Route>
         <Route path="/hydra-v2" component={HydraV2Page} />
         <Route path="/hydra" component={HydraPage} />
-        <Route path="/equipes" component={TeamsPage} />
+        <Route path="/equipes">{() => <TeamsPage />}</Route>
         <Route path="/joueurs/:id" component={PlayerProfilePage} />
         <Route path="/joueurs" component={PlayersPage} />
-        <Route path="/stats" component={StatsPage} />
-        <Route path="/recompenses" component={AwardsPage} />
+        <Route path="/stats">{() => <StatsPage />}</Route>
         <Route component={NotFound} />
       </Switch>
     </PublicLayout>

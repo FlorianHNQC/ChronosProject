@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { CompetitionSelect } from "@/components/competition-select";
 import { EmptyState } from "@/components/empty-state";
 import { Pager } from "@/components/pager";
+import { MatchCalendar } from "@/components/match-calendar";
 import { useLocation } from "wouter";
 import { CalendarDays, Trophy } from "lucide-react";
 import type { Competition, Match, Team } from "@shared/schema";
@@ -50,17 +51,19 @@ function groupOrdered(list: Match[]): [string, Match[]][] {
  * Calendrier & résultats — agenda regroupé par date (à venir puis passés).
  * Les matchs passés (potentiellement des centaines) sont paginés.
  */
-export function MatchesPage() {
+export function MatchesPage({ competitionId: fixedId }: { competitionId?: string } = {}) {
   const { data: comps } = useQuery<Competition[]>({ queryKey: ["/api/competitions"] });
-  const [competitionId, setCompetitionId] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const competitionId = fixedId ?? selectedId;
   const [page, setPage] = useState(1);
+  const [view, setView] = useState<"calendar" | "agenda">("calendar");
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    if (competitionId || !comps || comps.length === 0) return;
+    if (fixedId || selectedId || !comps || comps.length === 0) return;
     const pick = comps.find((c) => c.status === "active") ?? comps[0];
-    if (pick) setCompetitionId(pick.id);
-  }, [comps, competitionId]);
+    if (pick) setSelectedId(pick.id);
+  }, [comps, selectedId, fixedId]);
 
   const { data: teams } = useQuery<Team[]>({
     queryKey: ["/api/teams", competitionId],
@@ -148,7 +151,25 @@ export function MatchesPage() {
         title="Calendrier & résultats"
         icon={CalendarDays}
         actions={
-          <CompetitionSelect competitions={comps ?? []} value={competitionId} onValueChange={setCompetitionId} />
+          <>
+            <div className="inline-flex rounded-md border border-border p-0.5">
+              {(["calendar", "agenda"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                    view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {v === "calendar" ? "Calendrier" : "Agenda"}
+                </button>
+              ))}
+            </div>
+            {!fixedId && (
+              <CompetitionSelect competitions={comps ?? []} value={selectedId} onValueChange={setSelectedId} />
+            )}
+          </>
         }
       />
 
@@ -162,6 +183,8 @@ export function MatchesPage() {
           title="Aucun match pour cette compétition"
           description="Le calendrier et les résultats apparaîtront ici une fois les matchs programmés."
         />
+      ) : view === "calendar" ? (
+        <MatchCalendar matches={matches ?? []} teamName={teamName} />
       ) : (
         <>
           {upcomingGroups.length > 0 && (

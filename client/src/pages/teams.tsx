@@ -20,17 +20,18 @@ const PAGE_SIZE = 8;
 /**
  * Vue publique des équipes d'une compétition, avec leurs effectifs.
  */
-export function TeamsPage() {
+export function TeamsPage({ competitionId: fixedId }: { competitionId?: string } = {}) {
   const { data: comps } = useQuery<Competition[]>({ queryKey: ["/api/competitions"] });
-  const [competitionId, setCompetitionId] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const competitionId = fixedId ?? selectedId;
   const [page, setPage] = useState(1);
 
   // Sélectionne par défaut la première compétition active (sinon la première).
   useEffect(() => {
-    if (competitionId || !comps || comps.length === 0) return;
+    if (fixedId || selectedId || !comps || comps.length === 0) return;
     const active = comps.find((c) => c.status === "active") ?? comps[0];
-    if (active) setCompetitionId(active.id);
-  }, [comps, competitionId]);
+    if (active) setSelectedId(active.id);
+  }, [comps, selectedId, fixedId]);
 
   const { data: teams, isLoading } = useQuery<Team[]>({
     queryKey: ["/api/teams", competitionId],
@@ -50,7 +51,9 @@ export function TeamsPage() {
         title="Équipes"
         icon={Users}
         actions={
-          <CompetitionSelect competitions={comps ?? []} value={competitionId} onValueChange={setCompetitionId} />
+          fixedId ? undefined : (
+            <CompetitionSelect competitions={comps ?? []} value={selectedId} onValueChange={setSelectedId} />
+          )
         }
       />
 

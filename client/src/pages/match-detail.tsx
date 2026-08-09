@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { UserRound, ArrowLeft, BarChart3, Trophy } from "lucide-react";
+import { UserRound, ArrowLeft, BarChart3, Trophy, Star } from "lucide-react";
 import type { Match, Team } from "@shared/schema";
 
 type MatchStat = {
@@ -21,6 +21,10 @@ const STATUS: Record<string, { label: string; className: string }> = {
   completed: { label: "Terminé", className: "bg-primary/15 text-primary border-primary/25" },
   cancelled: { label: "Annulé", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25" },
 };
+
+/** Couleur de la note finale selon sa valeur (repère visuel rapide). */
+const noteColor = (n: number) =>
+  n >= 9 ? "text-emerald-400" : n >= 7 ? "text-primary" : n >= 5 ? "text-amber-400" : "text-red-400";
 
 export function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -103,43 +107,59 @@ export function MatchDetailPage() {
         />
       ) : (
         <div className="grid animate-fade-in-up animate-delay-100 grid-cols-1 gap-6 lg:grid-cols-2">
-          {groups.map(([teamId, list]) => (
-            <div key={teamId}>
-              <h2 className="mb-2 font-semibold">{teamName(teamId)}</h2>
-              <Card className="p-2">
-                <div className="overflow-x-auto">
+          {groups.map(([teamId, list]) => {
+            const teamWon = done && match?.winnerId === teamId;
+            const sorted = [...list].sort((a, b) => b.noteFinale - a.noteFinale);
+            return (
+              <div key={teamId}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h2 className="truncate font-semibold">{teamName(teamId)}</h2>
+                  {done && (
+                    <Badge className={`shrink-0 border-transparent ${teamWon ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"}`}>
+                      {teamWon ? "Vainqueur" : "Défaite"}
+                    </Badge>
+                  )}
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-border/50">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b text-right text-xs text-muted-foreground">
-                        <th className="py-1.5 pl-1 text-left">Joueur</th>
-                        <th className="px-1.5">K</th><th className="px-1.5">D</th>
-                        <th className="px-1.5">Dég.</th><th className="px-1.5">Perf</th>
-                        <th className="px-1.5">Imp.</th><th className="px-1.5">Note</th>
+                      <tr className="border-b border-border/60 bg-card/40 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <th className="py-2 pl-3 text-left font-medium">Joueur</th>
+                        <th className="px-2 font-medium">K</th>
+                        <th className="px-2 font-medium">D</th>
+                        <th className="px-2 font-medium">Dég.</th>
+                        <th className="border-l border-border/50 px-2 font-medium text-amber-400/80">Perf</th>
+                        <th className="px-2 font-medium text-primary">Impact</th>
+                        <th className="px-2 pr-3 font-medium">Note</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {list.sort((a, b) => b.noteFinale - a.noteFinale).map((s) => (
-                        <tr key={s.playerId} className="border-b text-right last:border-0">
-                          <td className="py-1.5 pl-1 text-left">
+                      {sorted.map((s) => (
+                        <tr key={s.playerId} className={`border-b border-border/25 text-right last:border-0 ${s.starPlayer ? "bg-primary/[0.05]" : ""}`}>
+                          <td className="py-2 pl-3 text-left">
                             <Link href={`/joueurs/${s.playerId}`} className="inline-flex items-center gap-1.5 hover:underline">
-                              <UserRound className="h-4 w-4 text-muted-foreground" />
-                              {s.pseudo}{s.starPlayer ? " ⭐" : ""}
+                              {s.starPlayer ? (
+                                <Star className="h-3.5 w-3.5 shrink-0 fill-primary text-primary" />
+                              ) : (
+                                <UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              )}
+                              <span className={s.starPlayer ? "font-medium" : ""}>{s.pseudo}</span>
                             </Link>
                           </td>
-                          <td className="px-1.5">{s.kills}</td>
-                          <td className="px-1.5">{s.deaths}</td>
-                          <td className="px-1.5">{s.damage.toLocaleString("fr-FR")}</td>
-                          <td className="px-1.5">{s.notePerf.toFixed(1)}</td>
-                          <td className="px-1.5">{s.impact.toFixed(1)}</td>
-                          <td className="px-1.5 font-semibold">{s.noteFinale.toFixed(2)}</td>
+                          <td className="px-2 tabular-nums">{s.kills}</td>
+                          <td className="px-2 tabular-nums text-muted-foreground">{s.deaths}</td>
+                          <td className="px-2 tabular-nums">{s.damage.toLocaleString("fr-FR")}</td>
+                          <td className="border-l border-border/50 px-2 tabular-nums text-muted-foreground">{s.notePerf.toFixed(1)}</td>
+                          <td className="px-2 tabular-nums text-primary">{s.impact.toFixed(1)}</td>
+                          <td className={`px-2 pr-3 font-bold tabular-nums ${noteColor(s.noteFinale)}`}>{s.noteFinale.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </Card>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
