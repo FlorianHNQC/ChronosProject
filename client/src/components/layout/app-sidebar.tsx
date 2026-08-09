@@ -4,8 +4,8 @@ import {
   SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import {
-  Trophy, Users, Shield, CalendarDays, UserCog, Tags, SlidersHorizontal,
-  ClipboardCheck, Shuffle, Sparkles, ExternalLink,
+  Trophy, Users, CalendarDays, UserCog, Tags, SlidersHorizontal,
+  ClipboardCheck, Shuffle, Sparkles, ExternalLink, LayoutDashboard,
 } from "lucide-react";
 
 /**
@@ -16,37 +16,45 @@ import {
 type NavItem = { label: string; href: string; icon: React.ComponentType<{ className?: string }> };
 type NavGroup = { label: string; items: NavItem[] };
 
+// Dashboard organisé en 5 rubriques (règle MVP) : Dashboard · Compétitions ·
+// Joueurs · Hydra · Tiers ; le reste des écrans devient des sous-entrées de la
+// rubrique la plus proche.
 const NAV: NavGroup[] = [
   {
-    label: "Tableau de bord",
+    label: "Dashboard",
     items: [
+      { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
       { label: "Voir le site", href: "/", icon: ExternalLink },
-      { label: "Console admin", href: "/admin", icon: Shield },
     ],
   },
   {
-    label: "Gestion",
+    label: "Compétitions",
     items: [
       { label: "Compétitions", href: "/admin/competitions", icon: Trophy },
-      { label: "Équipes", href: "/admin/equipes", icon: Users },
       { label: "Matchs", href: "/admin/matchs", icon: CalendarDays },
-      { label: "Joueurs", href: "/admin/joueurs", icon: UserCog },
+      { label: "Équipes", href: "/admin/equipes", icon: Users },
+      { label: "Validation compo", href: "/admin/validation", icon: ClipboardCheck },
     ],
   },
   {
-    label: "Classement",
+    label: "Joueurs",
+    items: [
+      { label: "Joueurs", href: "/admin/joueurs", icon: UserCog },
+      { label: "Fusion doublons", href: "/admin/fusion", icon: Shuffle },
+      { label: "Drifters", href: "/admin/drifters", icon: Shuffle },
+    ],
+  },
+  {
+    label: "Hydra",
     items: [
       { label: "Hydra", href: "/admin/hydra", icon: Sparkles },
-      { label: "Tiers", href: "/admin/tiers", icon: SlidersHorizontal },
       { label: "Tags", href: "/admin/tags", icon: Tags },
     ],
   },
   {
-    label: "Outils",
+    label: "Tiers",
     items: [
-      { label: "Fusion doublons", href: "/admin/fusion", icon: Shuffle },
-      { label: "Validation compo", href: "/admin/validation", icon: ClipboardCheck },
-      { label: "Drifters", href: "/admin/drifters", icon: Shuffle },
+      { label: "Tiers", href: "/admin/tiers", icon: SlidersHorizontal },
     ],
   },
 ];
