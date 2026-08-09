@@ -4,20 +4,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Pager } from "@/components/pager";
 import {
-  Sparkles, CalendarDays, BarChart3, Users, Trophy, UserRound,
-  Swords, Flag, Medal, Rocket, ArrowRight, History,
+  Sparkles, Trophy, UserRound, Swords, Flag, Rocket, ArrowRight, History,
 } from "lucide-react";
 import type { Competition, Player, Match, Team } from "@shared/schema";
 
-/** Raccourcis vers les pages de la communauté (Hydra = simple raccourci, pas de classement ici). */
+// Raccourcis alignés sur la nav publique : tout ce qui est propre à une
+// compétition (calendrier, playoffs, équipes, stats) se trouve désormais EN
+// ENTRANT dans une compétition. Restent au global : Compétitions, Hydra, Joueurs.
 const SHORTCUTS = [
-  { href: "/hydra", label: "Hydra", desc: "Classement par tiers", icon: Sparkles },
-  { href: "/calendrier", label: "Calendrier & résultats", desc: "Matchs à venir et passés", icon: CalendarDays },
-  { href: "/competitions", label: "Compétitions", desc: "Ligues & tournois", icon: Trophy },
-  { href: "/playoffs", label: "Playoffs", desc: "Grille des séries", icon: Medal },
-  { href: "/equipes", label: "Équipes", desc: "Rosters", icon: Users },
-  { href: "/joueurs", label: "Joueurs", desc: "Annuaire", icon: UserRound },
-  { href: "/stats", label: "Statistiques", desc: "Classements & agrégats", icon: BarChart3 },
+  { href: "/competitions", label: "Compétitions", desc: "Ligues & tournois — classement, calendrier, playoffs, équipes", icon: Trophy },
+  { href: "/hydra", label: "Hydra", desc: "Le classement par tiers", icon: Sparkles },
+  { href: "/joueurs", label: "Joueurs", desc: "L'annuaire de la communauté", icon: UserRound },
 ];
 
 type Ev = {
@@ -128,7 +125,7 @@ export function HomePage() {
       </div>
 
       {/* Raccourcis communauté */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-12 animate-fade-in-up animate-delay-100">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-12 animate-fade-in-up animate-delay-100">
         {SHORTCUTS.map((s) => (
           <Link key={s.href} href={s.href}>
             <Card className="group p-4 h-full flex items-start gap-3 hover:bg-muted/40 hover:border-primary/40 transition-colors cursor-pointer">
