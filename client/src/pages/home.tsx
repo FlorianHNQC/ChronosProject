@@ -16,22 +16,22 @@ import type { Competition, Player, Match, Team } from "@shared/schema";
 type AwardRow = { id: string; label: string; pseudo: string | null; avatarUrl: string | null; justification: string | null };
 type SettingValue = { key: string; value: string | null };
 
-/** Image de fond par défaut si l'admin n'en a pas défini (à déposer dans client/public). */
-const DEFAULT_BG = "/home-bg.jpg";
+/** Image de fond par défaut si l'admin n'en a pas défini (à déposer dans client/public/images). */
+const DEFAULT_BG = "/images/home-bg.jpg";
 
 /**
  * Grands raccourcis illustrés. Les images sont des fichiers statiques à déposer
- * dans client/public/shortcuts/ (servis à /shortcuts/...). Si un fichier manque,
+ * dans client/public/images/ (servis à /images/...). Si un fichier manque,
  * le panneau reste neutre avec l'icône — aucune option admin nécessaire.
  */
 const SHORTCUTS = [
-  { href: "/hydra", label: "Hydra", desc: "Classement par tiers", icon: Sparkles, img: "/shortcuts/hydra.jpg" },
-  { href: "/calendrier", label: "Calendrier & résultats", desc: "Matchs à venir et passés", icon: CalendarDays, img: "/shortcuts/calendrier.jpg" },
-  { href: "/competitions", label: "Compétitions", desc: "Ligues & tournois", icon: Trophy, img: "/shortcuts/competitions.jpg" },
-  { href: "/equipes", label: "Équipes", desc: "Rosters", icon: Users, img: "/shortcuts/equipes.jpg" },
-  { href: "/joueurs", label: "Joueurs", desc: "Annuaire", icon: UserRound, img: "/shortcuts/joueurs.jpg" },
-  { href: "/stats", label: "Statistiques", desc: "Classements & agrégats", icon: BarChart3, img: "/shortcuts/stats.jpg" },
-  { href: "/recompenses", label: "Récompenses", desc: "Palmarès", icon: Award, img: "/shortcuts/recompenses.jpg" },
+  { href: "/hydra", label: "Hydra", desc: "Classement par tiers", icon: Sparkles, img: "/images/hydra.jpg" },
+  { href: "/calendrier", label: "Calendrier & résultats", desc: "Matchs à venir et passés", icon: CalendarDays, img: "/images/calendrier.jpg" },
+  { href: "/competitions", label: "Compétitions", desc: "Ligues & tournois", icon: Trophy, img: "/images/competitions.jpg" },
+  { href: "/equipes", label: "Équipes", desc: "Rosters", icon: Users, img: "/images/equipes.jpg" },
+  { href: "/joueurs", label: "Joueurs", desc: "Annuaire", icon: UserRound, img: "/images/joueurs.jpg" },
+  { href: "/stats", label: "Statistiques", desc: "Classements & agrégats", icon: BarChart3, img: "/images/stats.jpg" },
+  { href: "/recompenses", label: "Récompenses", desc: "Palmarès", icon: Award, img: "/images/recompenses.jpg" },
 ];
 
 type Ev = {
@@ -168,7 +168,7 @@ export function HomePage() {
                   <Input
                     value={bgInput}
                     onChange={(e) => setBgInput(e.target.value)}
-                    placeholder="URL ou chemin de l'image (ex. /home-bg.jpg)"
+                    placeholder="URL ou chemin de l'image (ex. /images/home-bg.jpg)"
                     className="w-72 max-w-full"
                   />
                   <Button size="sm" disabled={saveBg.isPending} onClick={() => saveBg.mutate()}>

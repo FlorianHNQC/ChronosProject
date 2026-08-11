@@ -30,7 +30,10 @@ export function CompetitionStandings({
       const sh = m.scoreHome ?? 0;
       const sa = m.scoreAway ?? 0;
       h.j++; a.j++; h.bp += sh; h.bc += sa; a.bp += sa; a.bc += sh;
-      if (sh > sa) { h.v++; h.pts += 3; a.d++; }
+      // Le vainqueur est stocké dans winnerId (les scores ne sont pas toujours renseignés).
+      if (m.winnerId === m.teamHomeId) { h.v++; h.pts += 3; a.d++; }
+      else if (m.winnerId === m.teamAwayId) { a.v++; a.pts += 3; h.d++; }
+      else if (sh > sa) { h.v++; h.pts += 3; a.d++; }
       else if (sh < sa) { a.v++; a.pts += 3; h.d++; }
       else { h.n++; a.n++; h.pts++; a.pts++; }
     }
