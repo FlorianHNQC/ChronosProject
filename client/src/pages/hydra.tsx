@@ -129,7 +129,7 @@ export function HydraPage() {
     <div className="w-full px-6 py-8">
       <PageHero title="Hydra" subtitle="Programme de classement par tiers" settingKey="hero_hydra" defaultImage="/images/hydra.webp" />
 
-      <Accordion type="single" collapsible className="mb-6 border rounded-lg px-4">
+      <Accordion type="single" collapsible className="mb-6 border rounded-lg px-4 bg-card">
         {(sections ?? []).map((s) => (
           <AccordionItem key={s.key} value={s.key}>
             <AccordionTrigger>{s.title}</AccordionTrigger>
@@ -184,7 +184,7 @@ export function HydraPage() {
       <div className="space-y-2">
         {(!tiers || tiers.length === 0) && <p className="text-sm text-muted-foreground">Aucun tier configuré.</p>}
         {rows.ordered.map(({ tier, range, players }) => (
-          <div key={tier.id} className="flex rounded-lg border overflow-hidden">
+          <div key={tier.id} className="flex rounded-lg border overflow-hidden bg-card">
             <div className="flex flex-col items-center justify-center gap-0.5 w-24 shrink-0 py-3 text-white" style={{ backgroundColor: tier.color ?? "#666" }}>
               <span className="text-xl font-extrabold leading-none">{tier.code}</span>
               <span className="text-[10px] opacity-80 mt-0.5">{range}</span>
@@ -199,7 +199,7 @@ export function HydraPage() {
           </div>
         ))}
         {rows.unranked.length > 0 && (
-          <div className="flex rounded-lg border overflow-hidden opacity-90">
+          <div className="flex rounded-lg border overflow-hidden opacity-90 bg-card">
             <div className="flex flex-col items-center justify-center w-24 shrink-0 py-3 text-white bg-muted-foreground">
               <span className="text-xl font-extrabold leading-none">N/C</span>
               <span className="text-[10px] opacity-80 mt-0.5">Sans Elo</span>
