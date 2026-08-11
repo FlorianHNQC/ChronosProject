@@ -103,7 +103,7 @@ function Shell() {
         <main
           className="flex-1 overflow-auto"
           style={{
-            backgroundImage: `linear-gradient(hsl(var(--background) / 0.9), hsl(var(--background) / 0.9)), url("${siteImg}")`,
+            backgroundImage: `linear-gradient(hsl(var(--background) / 0.95), hsl(var(--background) / 0.95)), url("${siteImg}")`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundAttachment: "fixed",
