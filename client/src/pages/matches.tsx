@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { MatchCalendar } from "@/components/match-calendar";
+import { PageHero } from "@/components/page-hero";
 import type { Competition, Match, Team } from "@shared/schema";
 
 /**
@@ -31,8 +32,8 @@ export function MatchesPage() {
 
   return (
     <div className="w-full px-6 py-8">
+      <PageHero title="Calendrier & résultats" subtitle="Matchs à venir et passés" image="/images/calendrier.webp" />
       <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <h1 className="text-2xl font-bold">Calendrier & résultats</h1>
         <select
           value={competitionId}
           onChange={(e) => setCompetitionId(e.target.value)}

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Trophy, Archive, ChevronRight } from "lucide-react";
+import { PageHero } from "@/components/page-hero";
 import type { Competition } from "@shared/schema";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -21,7 +22,7 @@ export function CompetitionsPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <h1 className="text-2xl font-bold mb-6">Compétitions</h1>
+      <PageHero title="Compétitions" subtitle="Ligues & tournois" image="/images/competitions.webp" />
 
       {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
 

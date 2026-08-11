@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserRound } from "lucide-react";
 import { useLocation } from "wouter";
+import { PageHero } from "@/components/page-hero";
 import type { Player } from "@shared/schema";
 
 /**
@@ -30,8 +31,8 @@ export function PlayersPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Joueurs</h1>
+      <PageHero title="Joueurs" subtitle="Annuaire" image="/images/joueurs.webp" />
+      <div className="flex items-center justify-end gap-4 mb-6">
         <div className="relative w-64 max-w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input

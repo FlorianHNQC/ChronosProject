@@ -63,7 +63,7 @@ export function CompetitionDetailPage() {
   }, [teams]);
 
   return (
-    <div className="w-full px-6 py-8 max-w-6xl mx-auto">
+    <div className="w-full px-6 py-8">
       <Link href="/competitions" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-3">
         <ChevronLeft className="h-4 w-4" /> Compétitions
       </Link>

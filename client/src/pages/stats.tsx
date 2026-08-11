@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { UserRound } from "lucide-react";
+import { PageHero } from "@/components/page-hero";
 import type { Competition } from "@shared/schema";
 
 type PlayerAgg = {
@@ -53,8 +54,8 @@ export function StatsPage() {
 
   return (
     <div className="w-full px-6 py-8">
+      <PageHero title="Statistiques" subtitle="Classements & agrégats" image="/images/stats.webp" />
       <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <h1 className="text-2xl font-bold">Classements de stats</h1>
         <select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
           {(comps ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>

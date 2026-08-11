@@ -1,24 +1,38 @@
 # Dossier des images
 
-Toutes les images statiques du site vont ici. Elles sont servies à la racine sous
-`/images/<nom>` (en dev via Vite, et copiées dans le build en prod).
+Toutes les images statiques du site vont ici, au format **WebP** (optimisé). Elles sont
+servies à la racine sous `/images/<nom>.webp` (en dev via Vite, et copiées dans le build en prod).
+Le code référence directement ces `.webp`. Si un fichier manque, l'élément reste affiché
+(panneau/bandeau neutre + icône).
 
-## Page d'accueil
+## Fichiers attendus
 
-| Élément | Fichier | Chemin servi |
-| --- | --- | --- |
-| Image de fond du hero (défaut) | `home-bg.jpg` | `/images/home-bg.jpg` |
-| Raccourci Hydra | `hydra.jpg` | `/images/hydra.jpg` |
-| Raccourci Calendrier & résultats | `calendrier.jpg` | `/images/calendrier.jpg` |
-| Raccourci Compétitions | `competitions.jpg` | `/images/competitions.jpg` |
-| Raccourci Équipes | `equipes.jpg` | `/images/equipes.jpg` |
-| Raccourci Joueurs | `joueurs.jpg` | `/images/joueurs.jpg` |
-| Raccourci Statistiques | `stats.jpg` | `/images/stats.jpg` |
-| Raccourci Récompenses | `recompenses.jpg` | `/images/recompenses.jpg` |
+| Élément (raccourci d'accueil + bandeau de page) | Fichier |
+| --- | --- |
+| Fond du hero d'accueil (défaut) | `home-bg.webp` |
+| Hydra | `hydra.webp` |
+| Calendrier & résultats | `calendrier.webp` |
+| Compétitions | `competitions.webp` |
+| Équipes | `equipes.webp` |
+| Joueurs | `joueurs.webp` |
+| Statistiques | `stats.webp` |
+| Récompenses | `recompenses.webp` |
 
-Format conseillé pour les raccourcis : paysage ~400×200, `.jpg` ou `.png`.
-Si un fichier manque, l'élément reste affiché (panneau neutre + icône).
+Chaque image sert à la fois de vignette de raccourci sur l'accueil **et** de fond du bandeau
+de la page correspondante.
 
-L'image de fond du hero est modifiable en direct par un admin connecté (bouton
-« Changer l'image de fond »), qui accepte un chemin comme `/images/home-bg.jpg`
+## Générer les .webp optimisés
+
+1. Dépose tes images brutes (`.jpg` / `.png` / `.webp`) dans `client/public/images/_raw/`
+   (ce dossier est git-ignoré), en les nommant comme la colonne « Fichier » ci-dessus
+   (ex. `hydra.jpg`).
+2. Installe l'outil une fois :  `npm i -D sharp`
+3. Lance :  `npm run optimize:images`  (ou `node scripts/optimize-images.mjs --width=1600 --quality=65`)
+4. Les `.webp` optimisés apparaissent ici, prêts à être commités.
+
+Comme les bandeaux/vignettes sont derrière un voile sombre, une qualité ~60-65 est
+visuellement sans perte tout en réduisant fortement le poids.
+
+L'image de fond du hero d'accueil reste modifiable en direct par un admin connecté
+(bouton « Changer l'image de fond »), qui accepte un chemin comme `/images/home-bg.webp`
 ou une URL externe.

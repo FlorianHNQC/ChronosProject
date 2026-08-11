@@ -17,7 +17,7 @@ type AwardRow = { id: string; label: string; pseudo: string | null; avatarUrl: s
 type SettingValue = { key: string; value: string | null };
 
 /** Image de fond par défaut si l'admin n'en a pas défini (à déposer dans client/public/images). */
-const DEFAULT_BG = "/images/home-bg.jpg";
+const DEFAULT_BG = "/images/home-bg.webp";
 
 /**
  * Grands raccourcis illustrés. Les images sont des fichiers statiques à déposer
@@ -25,13 +25,13 @@ const DEFAULT_BG = "/images/home-bg.jpg";
  * le panneau reste neutre avec l'icône — aucune option admin nécessaire.
  */
 const SHORTCUTS = [
-  { href: "/hydra", label: "Hydra", desc: "Classement par tiers", icon: Sparkles, img: "/images/hydra.jpg" },
-  { href: "/calendrier", label: "Calendrier & résultats", desc: "Matchs à venir et passés", icon: CalendarDays, img: "/images/calendrier.jpg" },
-  { href: "/competitions", label: "Compétitions", desc: "Ligues & tournois", icon: Trophy, img: "/images/competitions.jpg" },
-  { href: "/equipes", label: "Équipes", desc: "Rosters", icon: Users, img: "/images/equipes.jpg" },
-  { href: "/joueurs", label: "Joueurs", desc: "Annuaire", icon: UserRound, img: "/images/joueurs.jpg" },
-  { href: "/stats", label: "Statistiques", desc: "Classements & agrégats", icon: BarChart3, img: "/images/stats.jpg" },
-  { href: "/recompenses", label: "Récompenses", desc: "Palmarès", icon: Award, img: "/images/recompenses.jpg" },
+  { href: "/hydra", label: "Hydra", desc: "Classement par tiers", icon: Sparkles, img: "/images/hydra.webp" },
+  { href: "/calendrier", label: "Calendrier & résultats", desc: "Matchs à venir et passés", icon: CalendarDays, img: "/images/calendrier.webp" },
+  { href: "/competitions", label: "Compétitions", desc: "Ligues & tournois", icon: Trophy, img: "/images/competitions.webp" },
+  { href: "/equipes", label: "Équipes", desc: "Rosters", icon: Users, img: "/images/equipes.webp" },
+  { href: "/joueurs", label: "Joueurs", desc: "Annuaire", icon: UserRound, img: "/images/joueurs.webp" },
+  { href: "/stats", label: "Statistiques", desc: "Classements & agrégats", icon: BarChart3, img: "/images/stats.webp" },
+  { href: "/recompenses", label: "Récompenses", desc: "Palmarès", icon: Award, img: "/images/recompenses.webp" },
 ];
 
 type Ev = {
@@ -135,7 +135,7 @@ export function HomePage() {
   const now = Date.now();
 
   return (
-    <div className="w-full px-6 py-8 max-w-6xl mx-auto">
+    <div className="w-full px-6 py-8">
       {/* Hero centré sur image de fond discrète (changeable par l'admin) */}
       <section className="relative overflow-hidden rounded-2xl border mb-10">
         <div
@@ -168,7 +168,7 @@ export function HomePage() {
                   <Input
                     value={bgInput}
                     onChange={(e) => setBgInput(e.target.value)}
-                    placeholder="URL ou chemin de l'image (ex. /images/home-bg.jpg)"
+                    placeholder="URL ou chemin de l'image (ex. /images/home-bg.webp)"
                     className="w-72 max-w-full"
                   />
                   <Button size="sm" disabled={saveBg.isPending} onClick={() => saveBg.mutate()}>

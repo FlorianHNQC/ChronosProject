@@ -12,6 +12,9 @@ build
 server/public
 public/uploads/
 
+# Images sources brutes (on ne versionne que les .webp optimisés générés)
+client/public/images/_raw/
+
 # Dumps DB (ne jamais versionner — contiennent des données)
 dump.sql
 dump-data.sql

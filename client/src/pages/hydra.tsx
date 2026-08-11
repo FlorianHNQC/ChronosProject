@@ -4,7 +4,8 @@ import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
-import { Search, UserRound, Sparkles, Wrench } from "lucide-react";
+import { Search, UserRound, Wrench } from "lucide-react";
+import { PageHero } from "@/components/page-hero";
 import { tierForElo } from "@shared/tiers";
 import { useMe } from "@/hooks/use-me";
 import { HydraSectionBlock } from "@/components/hydra-section";
@@ -126,13 +127,7 @@ export function HydraPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <div className="flex items-center gap-2 mb-1">
-        <Sparkles className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">Hydra</h1>
-      </div>
-      <p className="text-sm text-muted-foreground mb-6">
-        Programme de classement par tiers. Tous les joueurs qui participent à une compétition en font partie.
-      </p>
+      <PageHero title="Hydra" subtitle="Programme de classement par tiers" image="/images/hydra.webp" />
 
       <Accordion type="single" collapsible className="mb-6 border rounded-lg px-4">
         {(sections ?? []).map((s) => (

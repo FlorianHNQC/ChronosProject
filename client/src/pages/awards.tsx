@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { Award, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
+import { PageHero } from "@/components/page-hero";
 
 type AwardRow = { id: string; label: string; pseudo: string | null; avatarUrl: string | null; justification: string | null };
 
@@ -14,7 +15,7 @@ export function AwardsPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2"><Award className="h-6 w-6 text-primary" /> Récompenses</h1>
+      <PageHero title="Récompenses" subtitle="Palmarès" image="/images/recompenses.webp" />
 
       <section className="mb-10">
         <h2 className="font-semibold mb-3">Awards de saison</h2>

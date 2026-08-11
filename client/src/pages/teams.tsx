@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Star, UserRound } from "lucide-react";
+import { PageHero } from "@/components/page-hero";
 import type { Competition, Team } from "@shared/schema";
 
 type RosterMember = {
@@ -32,8 +33,8 @@ export function TeamsPage() {
 
   return (
     <div className="w-full px-6 py-8">
+      <PageHero title="Équipes" subtitle="Rosters" image="/images/equipes.webp" />
       <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <h1 className="text-2xl font-bold">Équipes</h1>
         <select
           value={competitionId}
           onChange={(e) => setCompetitionId(e.target.value)}
