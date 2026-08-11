@@ -7,7 +7,7 @@ import { settingsStore } from "./settingsStorage";
  * - PUT  /api/settings/:key : écriture (admin — garanti par requireAdminWrites),
  *   restreinte à une liste blanche de clés.
  */
-const EDITABLE_KEYS = new Set(["home_bg_url"]);
+const EDITABLE_KEYS = new Set(["home_bg"]);
 
 export function registerSettingsRoutes(app: Express) {
   app.get("/api/settings/:key", async (req, res, next) => {

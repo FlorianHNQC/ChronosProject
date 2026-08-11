@@ -1,6 +1,6 @@
 /**
  * Réglages génériques du site (table clé/valeur). Utilisé notamment pour
- * l'image de fond de la page d'accueil (clé « home_bg_url »).
+ * l'image de fond de la page d'accueil (clé « home_bg »).
  */
 import { eq } from "drizzle-orm";
 import { db } from "./db";
