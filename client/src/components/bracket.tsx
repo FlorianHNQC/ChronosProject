@@ -9,9 +9,12 @@ import type { PlayoffSeries } from "@shared/schema";
 export function Bracket({
   series,
   teamName,
+  vertical = false,
 }: {
   series: PlayoffSeries[];
   teamName: (id: string | null, label: string | null) => string;
+  /** Oriente le bracket de bas (premiers tours) vers le haut (finale). */
+  vertical?: boolean;
 }) {
   const rounds = useMemo(() => {
     const byRound = new Map<string, PlayoffSeries[]>();
@@ -32,6 +35,26 @@ export function Bracket({
 
   if (series.length === 0) {
     return <p className="text-sm text-muted-foreground">Aucune série.</p>;
+  }
+
+  // Orientation verticale : premiers tours en bas, finale en haut.
+  if (vertical) {
+    return (
+      <div className="flex flex-col-reverse gap-8">
+        {rounds.map(({ round, list }) => (
+          <div key={round}>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold capitalize text-center mb-2">{round}</div>
+            <div className="flex flex-wrap justify-center gap-4">
+              {list.map((s) => (
+                <div key={s.id} className="w-[230px]">
+                  <SeriesBox s={s} teamName={teamName} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (

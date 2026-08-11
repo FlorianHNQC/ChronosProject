@@ -1,25 +1,37 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useMe } from "@/hooks/use-me";
 import {
   Sparkles, CalendarDays, BarChart3, Users, Trophy, UserRound,
-  Swords, Award, Flag, Medal, Rocket, ArrowRight, History,
+  Swords, Award, Flag, Rocket, ArrowRight, History, Image as ImageIcon,
 } from "lucide-react";
 import type { Competition, Player, Match, Team } from "@shared/schema";
 
 type AwardRow = { id: string; label: string; pseudo: string | null; avatarUrl: string | null; justification: string | null };
+type SettingValue = { key: string; value: string | null };
 
-/** Raccourcis vers les pages de la communauté (Hydra = simple raccourci, pas de classement ici). */
+/** Image de fond par défaut si l'admin n'en a pas défini (à déposer dans client/public). */
+const DEFAULT_BG = "/home-bg.jpg";
+
+/**
+ * Grands raccourcis illustrés. Les images sont des fichiers statiques à déposer
+ * dans client/public/shortcuts/ (servis à /shortcuts/...). Si un fichier manque,
+ * le panneau reste neutre avec l'icône — aucune option admin nécessaire.
+ */
 const SHORTCUTS = [
-  { href: "/hydra", label: "Hydra", desc: "Classement par tiers", icon: Sparkles },
-  { href: "/calendrier", label: "Calendrier & résultats", desc: "Matchs à venir et passés", icon: CalendarDays },
-  { href: "/competitions", label: "Compétitions", desc: "Ligues & tournois", icon: Trophy },
-  { href: "/playoffs", label: "Playoffs", desc: "Grille des séries", icon: Medal },
-  { href: "/equipes", label: "Équipes", desc: "Rosters", icon: Users },
-  { href: "/joueurs", label: "Joueurs", desc: "Annuaire", icon: UserRound },
-  { href: "/stats", label: "Statistiques", desc: "Classements & agrégats", icon: BarChart3 },
-  { href: "/recompenses", label: "Récompenses", desc: "Palmarès", icon: Award },
+  { href: "/hydra", label: "Hydra", desc: "Classement par tiers", icon: Sparkles, img: "/shortcuts/hydra.jpg" },
+  { href: "/calendrier", label: "Calendrier & résultats", desc: "Matchs à venir et passés", icon: CalendarDays, img: "/shortcuts/calendrier.jpg" },
+  { href: "/competitions", label: "Compétitions", desc: "Ligues & tournois", icon: Trophy, img: "/shortcuts/competitions.jpg" },
+  { href: "/equipes", label: "Équipes", desc: "Rosters", icon: Users, img: "/shortcuts/equipes.jpg" },
+  { href: "/joueurs", label: "Joueurs", desc: "Annuaire", icon: UserRound, img: "/shortcuts/joueurs.jpg" },
+  { href: "/stats", label: "Statistiques", desc: "Classements & agrégats", icon: BarChart3, img: "/shortcuts/stats.jpg" },
+  { href: "/recompenses", label: "Récompenses", desc: "Palmarès", icon: Award, img: "/shortcuts/recompenses.jpg" },
 ];
 
 type Ev = {
@@ -37,11 +49,29 @@ const fmtDate = (d: Date) =>
 const ts = (v: unknown) => (v ? new Date(v as string).getTime() : 0);
 
 export function HomePage() {
+  const { toast } = useToast();
+  const { isAdmin } = useMe();
+
   const { data: players } = useQuery<Player[]>({ queryKey: ["/api/players"] });
   const { data: comps } = useQuery<Competition[]>({ queryKey: ["/api/competitions"] });
   const { data: teams } = useQuery<Team[]>({ queryKey: ["/api/teams"] });
   const { data: matches } = useQuery<Match[]>({ queryKey: ["/api/matches"] });
   const { data: awards } = useQuery<{ weekly: AwardRow[]; season: AwardRow[] }>({ queryKey: ["/api/awards"] });
+  const { data: bgSetting } = useQuery<SettingValue>({ queryKey: ["/api/settings/home_bg"] });
+
+  const bg = bgSetting?.value || DEFAULT_BG;
+
+  const [editingBg, setEditingBg] = useState(false);
+  const [bgInput, setBgInput] = useState("");
+  const saveBg = useMutation({
+    mutationFn: () => apiRequest("PUT", "/api/settings/home_bg", { value: bgInput.trim() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/home_bg"] });
+      setEditingBg(false);
+      toast({ title: "Image de fond mise à jour" });
+    },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
 
   const teamName = useMemo(() => {
     const m = new Map((teams ?? []).map((t) => [t.id, t.name]));
@@ -105,42 +135,91 @@ export function HomePage() {
   const now = Date.now();
 
   return (
-    <div className="w-full px-6 py-10 max-w-6xl mx-auto">
-      {/* En-tête */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-extrabold tracking-tight text-primary">CHRONOS</h1>
-        <p className="text-muted-foreground mt-1">Plateforme de la scène compétitive Brawl Stars.</p>
-        <div className="flex flex-wrap gap-2 mt-4 text-sm">
-          <span className="px-3 py-1 rounded-md bg-muted">{players?.length ?? 0} joueurs</span>
-          <span className="px-3 py-1 rounded-md bg-muted">{teams?.length ?? 0} équipes</span>
-          <span className="px-3 py-1 rounded-md bg-muted">{comps?.length ?? 0} compétitions</span>
-          {activeComp && (
-            <Link href="/competitions" className="px-3 py-1 rounded-md bg-primary/10 text-primary font-medium">
-              En cours : {activeComp.name}
-            </Link>
+    <div className="w-full px-6 py-8 max-w-6xl mx-auto">
+      {/* Hero centré sur image de fond discrète (changeable par l'admin) */}
+      <section className="relative overflow-hidden rounded-2xl border mb-10">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url("${bg}")` }}
+          aria-hidden
+        />
+        {/* Voile épais : l'image reste à peine visible. */}
+        <div className="absolute inset-0 bg-background/85" aria-hidden />
+        <div className="relative text-center px-6 py-16 sm:py-20">
+          <h1 className="text-5xl font-extrabold tracking-tight text-primary">CHRONOS</h1>
+          <p className="text-muted-foreground mt-2 max-w-xl mx-auto">
+            La scène compétitive Brawl Stars de la communauté.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 mt-5 text-sm">
+            <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{players?.length ?? 0} joueurs</span>
+            <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{teams?.length ?? 0} équipes</span>
+            <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{comps?.length ?? 0} compétitions</span>
+            {activeComp && (
+              <Link href="/competitions" className="px-3 py-1 rounded-md bg-primary/15 text-primary font-medium">
+                En cours : {activeComp.name}
+              </Link>
+            )}
+          </div>
+
+          {isAdmin && (
+            <div className="mt-6">
+              {editingBg ? (
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <Input
+                    value={bgInput}
+                    onChange={(e) => setBgInput(e.target.value)}
+                    placeholder="URL ou chemin de l'image (ex. /home-bg.jpg)"
+                    className="w-72 max-w-full"
+                  />
+                  <Button size="sm" disabled={saveBg.isPending} onClick={() => saveBg.mutate()}>
+                    Enregistrer
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingBg(false)}>
+                    Annuler
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setBgInput(bgSetting?.value ?? "");
+                    setEditingBg(true);
+                  }}
+                >
+                  <ImageIcon className="h-4 w-4 mr-1" /> Changer l'image de fond
+                </Button>
+              )}
+            </div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* Raccourcis communauté */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-12">
+      {/* Grands raccourcis illustrés */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
         {SHORTCUTS.map((s) => (
           <Link key={s.href} href={s.href}>
-            <Card className="group p-4 h-full flex items-start gap-3 hover:bg-muted/40 hover:border-primary/40 transition-colors cursor-pointer">
-              <s.icon className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold flex items-center gap-1">
-                  {s.label}
-                  <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+            <Card className="group overflow-hidden flex items-stretch h-24 hover:border-primary/50 transition-colors cursor-pointer">
+              <div
+                className="relative w-28 shrink-0 bg-muted bg-cover bg-center"
+                style={{ backgroundImage: `url("${s.img}")` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/70" />
+                <s.icon className="absolute bottom-1.5 left-1.5 h-5 w-5 text-white/90 drop-shadow" />
+              </div>
+              <div className="p-4 flex-1 flex items-center justify-between gap-2 min-w-0">
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{s.label}</div>
+                  <div className="text-xs text-muted-foreground truncate">{s.desc}</div>
                 </div>
-                <div className="text-xs text-muted-foreground">{s.desc}</div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
               </div>
             </Card>
           </Link>
         ))}
       </div>
 
-      {/* Timeline d'événements */}
+      {/* Fil d'actualité */}
       <h2 className="font-semibold mb-4 flex items-center gap-2">
         <History className="h-5 w-5 text-primary" /> Fil d'actualité
       </h2>

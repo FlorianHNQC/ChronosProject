@@ -7,7 +7,7 @@
  */
 import { and, eq } from "drizzle-orm";
 import { db } from "./db";
-import { teams, teamPlayers, players, type Team, type InsertTeam } from "@shared/schema";
+import { teams, teamPlayers, players, conferences, type Team, type InsertTeam, type Conference } from "@shared/schema";
 
 export type RosterMember = {
   playerId: string;
@@ -24,6 +24,11 @@ export const teamsStore = {
       return db.select().from(teams).where(eq(teams.competitionId, competitionId));
     }
     return db.select().from(teams);
+  },
+
+  /** Toutes les conférences (= poules), pour nommer les groupes d'une compétition. */
+  listConferences(): Promise<Conference[]> {
+    return db.select().from(conferences);
   },
 
   async get(id: string): Promise<Team | undefined> {

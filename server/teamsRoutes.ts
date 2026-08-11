@@ -15,6 +15,14 @@ export function registerTeamsRoutes(app: Express) {
     }
   });
 
+  app.get("/api/conferences", async (_req, res, next) => {
+    try {
+      res.json(await teamsStore.listConferences());
+    } catch (e) {
+      next(e);
+    }
+  });
+
   app.get("/api/teams/:id", async (req, res, next) => {
     try {
       const t = await teamsStore.get(req.params.id);

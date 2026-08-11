@@ -4,7 +4,7 @@ import {
   SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import {
-  Trophy, Swords, Users, BarChart3, Sparkles, Shield, LayoutList,
+  Trophy, Swords, Users, BarChart3, Sparkles, Shield,
   CalendarDays, Award, Home, UserCog, Tags, SlidersHorizontal,
   ClipboardCheck, Shuffle, Wand2,
 } from "lucide-react";
@@ -30,7 +30,6 @@ const NAV: NavGroup[] = [
       { label: "Accueil", href: "/", icon: Home },
       { label: "Ligue & tournois", href: "/competitions", icon: Trophy },
       { label: "Calendrier", href: "/calendrier", icon: CalendarDays },
-      { label: "Playoffs", href: "/playoffs", icon: LayoutList },
     ],
   },
   {
