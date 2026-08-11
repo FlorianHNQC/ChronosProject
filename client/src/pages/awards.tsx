@@ -15,7 +15,7 @@ export function AwardsPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <PageHero title="Récompenses" subtitle="Palmarès" image="/images/recompenses.webp" />
+      <PageHero title="Récompenses" subtitle="Palmarès" settingKey="hero_recompenses" defaultImage="/images/recompenses.webp" />
 
       <section className="mb-10">
         <h2 className="font-semibold mb-3">Awards de saison</h2>

@@ -7,7 +7,10 @@ import { settingsStore } from "./settingsStorage";
  * - PUT  /api/settings/:key : écriture (admin — garanti par requireAdminWrites),
  *   restreinte à une liste blanche de clés.
  */
-const EDITABLE_KEYS = new Set(["home_bg"]);
+// Clés modifiables : le fond global du site + les bandeaux par page (hero_*).
+function isEditableKey(key: string): boolean {
+  return key === "home_bg" || /^hero_[a-z_]+$/.test(key);
+}
 
 export function registerSettingsRoutes(app: Express) {
   app.get("/api/settings/:key", async (req, res, next) => {
@@ -21,7 +24,7 @@ export function registerSettingsRoutes(app: Express) {
 
   app.put("/api/settings/:key", async (req, res, next) => {
     try {
-      if (!EDITABLE_KEYS.has(req.params.key)) {
+      if (!isEditableKey(req.params.key)) {
         return res.status(403).json({ message: "Clé non modifiable." });
       }
       const value = typeof req.body?.value === "string" ? req.body.value.trim() : "";

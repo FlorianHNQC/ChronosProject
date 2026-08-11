@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useMe } from "@/hooks/use-me";
+import { PageHero } from "@/components/page-hero";
 import {
   Sparkles, CalendarDays, BarChart3, Users, Trophy, UserRound,
   Swords, Award, Flag, Rocket, ArrowRight, History, Image as ImageIcon,
@@ -15,9 +16,6 @@ import type { Competition, Player, Match, Team } from "@shared/schema";
 
 type AwardRow = { id: string; label: string; pseudo: string | null; avatarUrl: string | null; justification: string | null };
 type SettingValue = { key: string; value: string | null };
-
-/** Image de fond par défaut si l'admin n'en a pas défini (à déposer dans client/public/images). */
-const DEFAULT_BG = "/images/home-bg.webp";
 
 /**
  * Grands raccourcis illustrés. Les images sont des fichiers statiques à déposer
@@ -58,8 +56,6 @@ export function HomePage() {
   const { data: matches } = useQuery<Match[]>({ queryKey: ["/api/matches"] });
   const { data: awards } = useQuery<{ weekly: AwardRow[]; season: AwardRow[] }>({ queryKey: ["/api/awards"] });
   const { data: bgSetting } = useQuery<SettingValue>({ queryKey: ["/api/settings/home_bg"] });
-
-  const bg = bgSetting?.value || DEFAULT_BG;
 
   const [editingBg, setEditingBg] = useState(false);
   const [bgInput, setBgInput] = useState("");
@@ -136,64 +132,51 @@ export function HomePage() {
 
   return (
     <div className="w-full px-6 py-8">
-      {/* Hero centré sur image de fond discrète (changeable par l'admin) */}
-      <section className="relative overflow-hidden rounded-2xl border mb-10">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url("${bg}")` }}
-          aria-hidden
-        />
-        {/* Voile épais : l'image reste à peine visible. */}
-        <div className="absolute inset-0 bg-background/85" aria-hidden />
-        <div className="relative text-center px-6 py-16 sm:py-20">
-          <h1 className="text-5xl font-extrabold tracking-tight text-primary">CHRONOS</h1>
-          <p className="text-muted-foreground mt-2 max-w-xl mx-auto">
-            La scène compétitive Brawl Stars de la communauté.
-          </p>
-          <div className="flex flex-wrap justify-center gap-2 mt-5 text-sm">
-            <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{players?.length ?? 0} joueurs</span>
-            <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{teams?.length ?? 0} équipes</span>
-            <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{comps?.length ?? 0} compétitions</span>
-            {activeComp && (
-              <Link href="/competitions" className="px-3 py-1 rounded-md bg-primary/15 text-primary font-medium">
-                En cours : {activeComp.name}
-              </Link>
-            )}
-          </div>
-
-          {isAdmin && (
-            <div className="mt-6">
-              {editingBg ? (
-                <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <Input
-                    value={bgInput}
-                    onChange={(e) => setBgInput(e.target.value)}
-                    placeholder="URL ou chemin de l'image (ex. /images/home-bg.webp)"
-                    className="w-72 max-w-full"
-                  />
-                  <Button size="sm" disabled={saveBg.isPending} onClick={() => saveBg.mutate()}>
-                    Enregistrer
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingBg(false)}>
-                    Annuler
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setBgInput(bgSetting?.value ?? "");
-                    setEditingBg(true);
-                  }}
-                >
-                  <ImageIcon className="h-4 w-4 mr-1" /> Changer l'image de fond
-                </Button>
-              )}
-            </div>
+      {/* Bandeau d'accueil (image propre « hero_home ») + contrôle du fond du site. */}
+      <PageHero
+        large
+        settingKey="hero_home"
+        defaultImage="/images/home-bg.webp"
+        title="CHRONOS"
+        subtitle="La scène compétitive Brawl Stars de la communauté."
+      >
+        <div className="flex flex-wrap justify-center gap-2 mt-5 text-sm">
+          <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{players?.length ?? 0} joueurs</span>
+          <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{teams?.length ?? 0} équipes</span>
+          <span className="px-3 py-1 rounded-md bg-muted/80 backdrop-blur">{comps?.length ?? 0} compétitions</span>
+          {activeComp && (
+            <Link href="/competitions" className="px-3 py-1 rounded-md bg-primary/15 text-primary font-medium">
+              En cours : {activeComp.name}
+            </Link>
           )}
         </div>
-      </section>
+
+        {isAdmin && (
+          <div className="mt-3">
+            {editingBg ? (
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <Input
+                  value={bgInput}
+                  onChange={(e) => setBgInput(e.target.value)}
+                  placeholder="Fond du site — /images/home-bg.webp ou URL (vide = défaut)"
+                  className="w-80 max-w-full"
+                />
+                <Button size="sm" disabled={saveBg.isPending} onClick={() => saveBg.mutate()}>Enregistrer</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingBg(false)}>Annuler</Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs text-muted-foreground"
+                onClick={() => { setBgInput(bgSetting?.value ?? ""); setEditingBg(true); }}
+              >
+                <ImageIcon className="h-4 w-4 mr-1" /> Changer le fond du site
+              </Button>
+            )}
+          </div>
+        )}
+      </PageHero>
 
       {/* Grands raccourcis illustrés */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">

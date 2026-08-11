@@ -54,7 +54,7 @@ export function StatsPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <PageHero title="Statistiques" subtitle="Classements & agrégats" image="/images/stats.webp" />
+      <PageHero title="Statistiques" subtitle="Classements & agrégats" settingKey="hero_stats" defaultImage="/images/stats.webp" />
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
           {(comps ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

@@ -87,6 +87,9 @@ function LogoutButton() {
 }
 
 function Shell() {
+  // Fond global du site (réglage « home_bg »), commun à toutes les pages.
+  const { data: siteBg } = useQuery<{ key: string; value: string | null }>({ queryKey: ["/api/settings/home_bg"] });
+  const siteImg = siteBg?.value || "/images/home-bg.webp";
   return (
     <SidebarProvider
       style={{ "--sidebar-width": "16rem", "--sidebar-width-icon": "4rem" } as React.CSSProperties}
@@ -97,7 +100,15 @@ function Shell() {
           <SidebarTrigger />
           <LogoutButton />
         </header>
-        <main className="flex-1 overflow-auto">
+        <main
+          className="flex-1 overflow-auto"
+          style={{
+            backgroundImage: `linear-gradient(hsl(var(--background) / 0.9), hsl(var(--background) / 0.9)), url("${siteImg}")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundAttachment: "fixed",
+          }}
+        >
           <Switch>
             <Route path="/" component={HomePage} />
             <Route path="/login" component={LoginPage} />

@@ -32,7 +32,7 @@ export function MatchesPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <PageHero title="Calendrier & résultats" subtitle="Matchs à venir et passés" image="/images/calendrier.webp" />
+      <PageHero title="Calendrier & résultats" subtitle="Matchs à venir et passés" settingKey="hero_calendrier" defaultImage="/images/calendrier.webp" />
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <select
           value={competitionId}

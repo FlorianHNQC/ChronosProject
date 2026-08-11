@@ -22,7 +22,7 @@ export function CompetitionsPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <PageHero title="Compétitions" subtitle="Ligues & tournois" image="/images/competitions.webp" />
+      <PageHero title="Compétitions" subtitle="Ligues & tournois" settingKey="hero_competitions" defaultImage="/images/competitions.webp" />
 
       {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
 

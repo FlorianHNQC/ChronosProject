@@ -127,7 +127,7 @@ export function HydraPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <PageHero title="Hydra" subtitle="Programme de classement par tiers" image="/images/hydra.webp" />
+      <PageHero title="Hydra" subtitle="Programme de classement par tiers" settingKey="hero_hydra" defaultImage="/images/hydra.webp" />
 
       <Accordion type="single" collapsible className="mb-6 border rounded-lg px-4">
         {(sections ?? []).map((s) => (

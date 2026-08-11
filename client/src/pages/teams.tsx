@@ -33,7 +33,7 @@ export function TeamsPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <PageHero title="Équipes" subtitle="Rosters" image="/images/equipes.webp" />
+      <PageHero title="Équipes" subtitle="Rosters" settingKey="hero_equipes" defaultImage="/images/equipes.webp" />
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <select
           value={competitionId}

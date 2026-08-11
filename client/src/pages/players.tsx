@@ -31,7 +31,7 @@ export function PlayersPage() {
 
   return (
     <div className="w-full px-6 py-8">
-      <PageHero title="Joueurs" subtitle="Annuaire" image="/images/joueurs.webp" />
+      <PageHero title="Joueurs" subtitle="Annuaire" settingKey="hero_joueurs" defaultImage="/images/joueurs.webp" />
       <div className="flex items-center justify-end gap-4 mb-6">
         <div className="relative w-64 max-w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
