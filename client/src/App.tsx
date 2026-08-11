@@ -94,21 +94,21 @@ function Shell() {
     <SidebarProvider
       style={{ "--sidebar-width": "16rem", "--sidebar-width-icon": "4rem" } as React.CSSProperties}
     >
+      {/* Fond du site : image floutée + désaturée sous un voile sombre (ambiance discrète, bien plus effacée que les bandeaux). */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url("${siteImg}")`, filter: "blur(10px) saturate(0.55)", transform: "scale(1.1)" }}
+        />
+        <div className="absolute inset-0 bg-background/80" />
+      </div>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="relative z-10 bg-transparent">
         <header className="sticky top-0 z-40 flex items-center h-14 px-4 border-b border-border bg-background/95 backdrop-blur">
           <SidebarTrigger />
           <LogoutButton />
         </header>
-        <main
-          className="flex-1 overflow-auto"
-          style={{
-            backgroundImage: `linear-gradient(hsl(var(--background) / 0.95), hsl(var(--background) / 0.95)), url("${siteImg}")`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundAttachment: "fixed",
-          }}
-        >
+        <main className="flex-1 overflow-auto">
           <Switch>
             <Route path="/" component={HomePage} />
             <Route path="/login" component={LoginPage} />
