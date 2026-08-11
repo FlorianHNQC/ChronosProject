@@ -1,0 +1,50 @@
+name: Deploy Chronos
+
+# CI (type-check + build) à chaque push/PR sur la branche de déploiement,
+# puis déploiement SSH sur le VPS uniquement pour les push (pas les PR).
+
+on:
+  push:
+    branches: [foundation/monorepo]
+  pull_request:
+    branches: [foundation/monorepo]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Vérification (type-check + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Type-check
+        run: npm run check
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: Déploiement VPS
+    needs: ci
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déployer par SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          # Décommenter si SSH n'est pas sur le port 22 (et créer le secret VPS_PORT) :
+          # port: ${{ secrets.VPS_PORT }}
+          script_stop: true
+          script: |
+            cd ~/ChronosProject
+            bash scripts/ci-deploy.sh foundation/monorepo
