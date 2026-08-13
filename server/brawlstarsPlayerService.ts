@@ -83,7 +83,7 @@ async function fetchOfficialPlayer(encodedTag: string): Promise<any> {
   const token = process.env.BRAWLSTARS_API_TOKEN;
   if (!token) {
     throw Object.assign(
-      new Error("BRAWLSTARS_API_TOKEN manquant (renseignez-le dans .env.local)."),
+      new Error("Token API Brawl Stars manquant : renseignez BRAWLSTARS_API_TOKEN dans le fichier .env, puis redémarrez l'application."),
       { status: 503 },
     );
   }
@@ -95,7 +95,7 @@ async function fetchOfficialPlayer(encodedTag: string): Promise<any> {
   }
   if (res.status === 403) {
     throw Object.assign(
-      new Error("API refusée (403) : token invalide ou IP non autorisée."),
+      new Error("API Brawl Stars refusée (403) : token invalide, ou IP du serveur non autorisée sur la clé (developer.brawlstars.com)."),
       { status: 403 },
     );
   }

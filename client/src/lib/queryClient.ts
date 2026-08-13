@@ -2,8 +2,20 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // Extraire le message applicatif ({ message }) plutôt que le corps brut.
+    let message = "";
+    try {
+      const body = await res.clone().json();
+      if (body && typeof body.message === "string") message = body.message;
+    } catch {
+      try { message = await res.text(); } catch { /* corps illisible */ }
+    }
+    if (!message) {
+      if (res.status === 401) message = "Connecte-toi en tant qu'administrateur pour cette action.";
+      else if (res.status === 403) message = "Action réservée à un administrateur.";
+      else message = `Erreur ${res.status}.`;
+    }
+    throw new Error(message);
   }
 }
 

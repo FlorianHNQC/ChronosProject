@@ -102,11 +102,35 @@ app.use((req, res, next) => {
   registerValidationRoutes(app);
   registerDrifterRoutes(app);
 
+  // Messages d'erreur PostgreSQL courants → messages clairs (sans fuiter le SQL brut).
+  const PG_MESSAGES: Record<string, string> = {
+    "42P01": "La base de données n'est pas à jour (table manquante). Exécutez `npm run db:push`.",
+    "42703": "La base de données n'est pas à jour (colonne manquante). Exécutez `npm run db:push`.",
+    "23505": "Cette valeur existe déjà.",
+    "23503": "Référence invalide : un élément lié est introuvable ou encore utilisé.",
+    "23502": "Un champ obligatoire est manquant.",
+    "22P02": "Valeur invalide (format incorrect).",
+    "23514": "Valeur non autorisée.",
+    "53300": "Base de données momentanément surchargée. Réessayez.",
+    ECONNREFUSED: "Base de données injoignable. Réessayez dans un instant.",
+  };
+
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    console.error("Internal Server Error:", err);
+    console.error("API error:", err);
     if (res.headersSent) return next(err);
-    res.status(status).json({ message: err.message || "Internal Server Error" });
+
+    let message: string;
+    if (err.code && PG_MESSAGES[err.code]) {
+      message = PG_MESSAGES[err.code];
+    } else if (status >= 500) {
+      // Ne pas exposer les détails internes des erreurs inattendues.
+      message = "Erreur serveur inattendue. Réessayez plus tard.";
+    } else {
+      // Erreurs volontaires (4xx) : on garde le message applicatif.
+      message = err.message || "Requête invalide.";
+    }
+    res.status(status).json({ message });
   });
 
   // Vite en dev, statique en prod — apres les routes API.
