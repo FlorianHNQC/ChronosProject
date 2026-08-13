@@ -6,7 +6,7 @@ import {
 import {
   Trophy, Swords, Users, BarChart3, Sparkles, Shield,
   CalendarDays, Award, Home, UserCog, Tags, SlidersHorizontal,
-  ClipboardCheck, Shuffle, Wand2,
+  ClipboardCheck, Shuffle,
 } from "lucide-react";
 
 /**
@@ -36,7 +36,6 @@ const NAV: NavGroup[] = [
     label: "Hydra",
     items: [
       { label: "Classement (tiers)", href: "/hydra", icon: Sparkles },
-      { label: "Classement — v2", href: "/hydra-v2", icon: Wand2 },
     ],
   },
   {

@@ -69,7 +69,10 @@ export async function registerRoutes(_httpServer: Server, app: Express) {
 
       const existing = await storage.getPlayerByTag(profile.tag);
       if (existing) {
-        return res.status(409).json({ message: "Ce joueur existe déjà.", player: existing });
+        return res.status(409).json({
+          message: `Ce tag est déjà associé à un joueur existant (« ${existing.pseudo} »). Inutile de le recréer : fusionne plutôt les doublons via l'outil Fusion.`,
+          player: existing,
+        });
       }
 
       const insert = storage.profileToInsert(profile, {

@@ -13,7 +13,6 @@ import { HomePage } from "@/pages/home";
 import { PlayersPage } from "@/pages/players";
 import { PlayerProfilePage } from "@/pages/player-profile";
 import { HydraPage } from "@/pages/hydra";
-import { HydraV2Page } from "@/pages/hydra-v2";
 import { CompetitionsPage } from "@/pages/competitions";
 import { CompetitionDetailPage } from "@/pages/competition-detail";
 import { TeamsPage } from "@/pages/teams";
@@ -117,7 +116,6 @@ function Shell() {
             <Route path="/competitions/:id" component={CompetitionDetailPage} />
             <Route path="/calendrier" component={MatchesPage} />
             <Route path="/matchs/:id" component={MatchDetailPage} />
-            <Route path="/hydra-v2" component={HydraV2Page} />
             <Route path="/hydra" component={HydraPage} />
             <Route path="/equipes" component={TeamsPage} />
             <Route path="/joueurs" component={PlayersPage} />
