@@ -5,7 +5,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "./db";
 import { tiers, players, eloChangelog, changelogBatches, users, type Tier, type Player } from "@shared/schema";
-import { tierForElo } from "@shared/tiers";
+import { eloEngine } from "./eloEngineStorage";
 
 export type ChangelogRow = {
   id: string;
@@ -39,37 +39,19 @@ export const hydra = {
     return db.select().from(tiers).orderBy(tiers.orderIndex);
   },
 
-  /** Définit l'Elo d'un joueur, recalcule son tier et journalise le changement. */
-  async setPlayerElo(id: string, elo: number, comment?: string, authorUserId?: string): Promise<Player | undefined> {
+  /**
+   * Définit l'Elo de DÉPART (évaluation préliminaire) d'un joueur, puis relance
+   * le recalcul global : l'Elo affiché part de cette valeur et est ajusté par les
+   * matchs. Le recalcul journalise et attribue les changements à l'admin.
+   */
+  async setPlayerElo(id: string, seedElo: number, _comment?: string, authorUserId?: string): Promise<Player | undefined> {
     const [player] = await db.select().from(players).where(eq(players.id, id));
     if (!player) return undefined;
 
-    const allTiers = await this.listTiers();
-    const oldTierId = player.tierId ?? null;
-    const newTierId = tierForElo(elo, allTiers)?.id ?? null;
+    await db.update(players).set({ seedElo }).where(eq(players.id, id));
+    await eloEngine.recompute({ authorUserId });
 
-    const [updated] = await db
-      .update(players)
-      .set({ elo, tierId: newTierId, lastEloChangeAt: new Date() })
-      .where(eq(players.id, id))
-      .returning();
-
-    // Chaque réglage manuel est journalisé dans un lot daté et attribué à l'admin.
-    const [batch] = await db
-      .insert(changelogBatches)
-      .values({ note: "Réglage manuel", authorUserId: authorUserId ?? null })
-      .returning();
-
-    await db.insert(eloChangelog).values({
-      batchId: batch.id,
-      playerId: id,
-      oldElo: player.elo ?? null,
-      newElo: elo,
-      oldTierId,
-      newTierId,
-      comment: comment || null,
-    });
-
+    const [updated] = await db.select().from(players).where(eq(players.id, id));
     return updated;
   },
 

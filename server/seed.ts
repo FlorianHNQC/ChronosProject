@@ -129,17 +129,23 @@ const DEFAULT_HYDRA_SECTIONS = [
     title: "Notes (notation)",
     orderIndex: 2,
     body:
-      "Le tier d'un joueur est **dérivé de son Elo**, lui-même piloté en priorité par les **résultats** des compétitions. Les statistiques en jeu, peu fiables, ne pèsent que marginalement.\n\n" +
-      "Les seuils d'Elo de chaque tier sont configurables par les administrateurs : le classement s'adapte donc à la réalité de la scène plutôt qu'à une grille figée.",
+      "Le classement repose sur un **Elo**, mis à jour à partir des **résultats** des matchs (le vainqueur), et non des statistiques en jeu, jugées peu fiables. Le **tier** (T0, T1…) n'est qu'une lecture de l'Elo selon des seuils configurables.\n\n" +
+      "**Comment l'Elo évolue :**\n" +
+      "- Chaque joueur part d'un **Elo de départ** (une évaluation préliminaire) ; les matchs le font ensuite monter ou descendre.\n" +
+      "- Après un match, l'Elo moyen de l'équipe est comparé à celui de l'adversaire : **battre plus fort que soi rapporte beaucoup**, perdre contre plus faible coûte cher (et inversement). Un nul vaut un demi-résultat.\n" +
+      "- La vitesse de variation (le **facteur K**) est **adaptative** : élevée pour les nouveaux (calibrage rapide), plus faible pour les joueurs confirmés (stabilité en haut de classement).\n" +
+      "- Seules les compétitions marquées **compétitives** influencent l'Elo.\n\n" +
+      "Les seuils des tiers comme les paramètres du moteur (K, base…) sont **réglables par les administrateurs** : le classement colle à la réalité de la scène plutôt qu'à une grille figée.",
   },
   {
     key: "criteria",
     title: "Critères",
     orderIndex: 3,
     body:
-      "Les joueurs sont répartis en trois modes :\n\n" +
+      "**Placement dans un tier.** Il dépend uniquement de l'Elo : dès qu'il franchit un seuil (configurable), le joueur change de tier. L'Elo lui-même vient des résultats (voir « Notes (notation) »).\n\n" +
+      "**Modes.** Les joueurs sont répartis en trois modes :\n" +
       "- **Joueurs** — ont déjà disputé au moins une compétition.\n" +
-      "- **Rookie** — nouveaux venus, aucune compétition jouée pour l'instant.\n" +
+      "- **Rookie** — nouveaux venus, aucune compétition jouée pour l'instant (Elo encore en calibrage).\n" +
       "- **Réserve** — mis de côté temporairement après une longue inactivité (plus de 90 jours sans évolution d'Elo).",
   },
 ];

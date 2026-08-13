@@ -143,6 +143,9 @@ export const players = pgTable("players", {
   accountCreatedAt: timestamp("account_created_at"),
   // Classement. L'Elo est la source ; le tier en est dérivé (voir tiers).
   elo: integer("elo").default(1000),
+  // Elo de départ (évaluation préliminaire réglable par admin). Le recalcul part
+  // de cette valeur pour chaque joueur, puis les matchs l'ajustent.
+  seedElo: integer("seed_elo").default(1000),
   tierId: varchar("tier_id").references(() => tiers.id),
   // Signal pour le mode Réserve : dernière évolution effective de l'Elo.
   lastEloChangeAt: timestamp("last_elo_change_at"),

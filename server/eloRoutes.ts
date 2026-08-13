@@ -1,10 +1,34 @@
 import type { Express } from "express";
 import { eloEngine } from "./eloEngineStorage";
+import { eloParamsStore, type EloParams } from "./eloParamsStorage";
 
 /**
- * Route de recalcul de l'Elo depuis les résultats.
+ * Routes du moteur Elo : recalcul depuis les résultats + paramètres éditables.
  */
 export function registerEloRoutes(app: Express) {
+  // Lecture des paramètres du moteur Elo (public).
+  app.get("/api/elo/params", async (_req, res, next) => {
+    try {
+      res.json(await eloParamsStore.get());
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Mise à jour des paramètres (admin — protégé par requireAdminWrites).
+  app.put("/api/elo/params", async (req, res, next) => {
+    try {
+      const b = req.body ?? {};
+      const patch: Partial<EloParams> = {};
+      for (const k of ["base", "provisionalGames", "kProvisional", "kBase", "kStableElo", "kStable"] as (keyof EloParams)[]) {
+        if (b[k] !== undefined && b[k] !== "" && !Number.isNaN(Number(b[k]))) patch[k] = Number(b[k]);
+      }
+      res.json(await eloParamsStore.set(patch));
+    } catch (e) {
+      next(e);
+    }
+  });
+
   // Body : { k?: number, competitionId?: string }
   app.post("/api/admin/recompute-elo", async (req, res, next) => {
     try {

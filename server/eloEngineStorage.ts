@@ -1,91 +1,119 @@
 /**
  * Moteur de classement Elo — recalcul depuis les résultats.
  *
- * L'Elo est piloté par les faits objectifs (résultats de match). On repart d'une
- * base neutre et on rejoue les matchs (qui ont des stats, donc une composition
- * connue) dans l'ordre chronologique, avec une mise à jour de type Elo par
- * équipe. Le facteur K est configurable (itératif, cf. CDC §14.1). Chaque
- * recalcul produit un batch de changelog et met à jour, pour chaque joueur, son
- * Elo, son tier, la date de dernière évolution et le nombre de compétitions
- * jouées (denormalisé, utile aux modes Rookie / Réserve).
+ * Principes (cf. CDC §14) :
+ *  - Chaque joueur part de son **Elo de départ** (seed_elo, évaluation préliminaire
+ *    réglable par admin), pas d'une base uniforme.
+ *  - Le résultat vient de `matches.winner_id` (fiable), et la composition des
+ *    rosters d'équipe (team_players) — pas des stats du dernier round (peu fiables).
+ *  - Elo par équipe (moyenne des joueurs, courbe logistique en /400), **résultat
+ *    seul** (victoire/défaite/nul), **K adaptatif** (provisoire élevé → stable).
+ *  - Seules les compétitions marquées `affects_elo` comptent.
  *
- * Ce recalcul est l'automation déclenchée après une fusion de profils (le profil
- * conservé hérite de l'historique de l'autre → son classement doit être recalculé).
+ * Chaque recalcul produit un batch de changelog et met à jour, par joueur : Elo,
+ * tier, date de dernière évolution et nombre de compétitions jouées.
  */
 import { asc, eq } from "drizzle-orm";
 import { db } from "./db";
 import {
-  matches, matchPlayerStats, players, tiers, changelogBatches, eloChangelog,
+  matches, teamPlayers, teams, competitions, players, tiers, changelogBatches, eloChangelog,
 } from "@shared/schema";
 import { tierForElo } from "@shared/tiers";
-
-const BASE = 1000;
+import { eloParamsStore } from "./eloParamsStorage";
 
 export const eloEngine = {
   async recompute(opts: { k?: number; competitionId?: string; authorUserId?: string }): Promise<{ players: number; matches: number; k: number }> {
-    const K = opts.k && opts.k > 0 ? opts.k : 24;
+    const P = await eloParamsStore.get();
+    const BASE = P.base;
+    const fixedK = opts.k && opts.k > 0 ? opts.k : null;
 
-    const allPlayers = await db.select({ id: players.id, elo: players.elo }).from(players);
+    const allPlayers = await db.select({ id: players.id, elo: players.elo, seedElo: players.seedElo }).from(players);
     const prev = new Map<string, number>(allPlayers.map((p) => [p.id, p.elo ?? BASE]));
-    const cur = new Map<string, number>(allPlayers.map((p) => [p.id, BASE]));
+    const cur = new Map<string, number>(allPlayers.map((p) => [p.id, p.seedElo ?? BASE]));
+    const games = new Map<string, number>();
 
-    // Tous les matchs (pour la carte matchId → compétition) et l'ordre chronologique.
+    // Compétitions qui comptent pour l'Elo.
+    const comps = await db.select({ id: competitions.id, affectsElo: competitions.affectsElo }).from(competitions);
+    const affects = new Set(comps.filter((c) => c.affectsElo !== false).map((c) => c.id));
+
+    // Rosters : teamId -> playerId[] ; et compétition de chaque équipe.
+    const tps = await db.select({ teamId: teamPlayers.teamId, playerId: teamPlayers.playerId }).from(teamPlayers);
+    const tms = await db.select({ id: teams.id, competitionId: teams.competitionId }).from(teams);
+    const teamComp = new Map<string, string | null>(tms.map((t) => [t.id, t.competitionId]));
+    const roster = new Map<string, string[]>();
+    for (const tp of tps) {
+      if (!roster.has(tp.teamId)) roster.set(tp.teamId, []);
+      roster.get(tp.teamId)!.push(tp.playerId);
+    }
+
+    // Compétitions jouées par joueur (via rosters d'équipes rattachées à une compétition).
+    const compsByPlayer = new Map<string, Set<string>>();
+    for (const tp of tps) {
+      const cid = teamComp.get(tp.teamId);
+      if (!cid) continue;
+      if (!compsByPlayer.has(tp.playerId)) compsByPlayer.set(tp.playerId, new Set());
+      compsByPlayer.get(tp.playerId)!.add(cid);
+    }
+
+    // Matchs terminés, dans l'ordre chronologique.
     const ms = await db
-      .select({ id: matches.id, competitionId: matches.competitionId })
+      .select({
+        id: matches.id,
+        competitionId: matches.competitionId,
+        teamHomeId: matches.teamHomeId,
+        teamAwayId: matches.teamAwayId,
+        winnerId: matches.winnerId,
+        status: matches.status,
+      })
       .from(matches)
       .orderBy(asc(matches.datetime));
-    const matchComp = new Map<string, string | null>(ms.map((m) => [m.id, m.competitionId]));
-    const matchList = opts.competitionId ? ms.filter((m) => m.competitionId === opts.competitionId) : ms;
 
-    // Toutes les stats en une passe, groupées par match.
-    const stats = await db
-      .select({ matchId: matchPlayerStats.matchId, playerId: matchPlayerStats.playerId, teamId: matchPlayerStats.teamId, victory: matchPlayerStats.victory })
-      .from(matchPlayerStats);
-    const byMatch = new Map<string, typeof stats>();
-    for (const s of stats) {
-      if (!byMatch.has(s.matchId)) byMatch.set(s.matchId, []);
-      byMatch.get(s.matchId)!.push(s);
-    }
-
-    // Compétitions jouées par joueur (global, indépendant du périmètre Elo).
-    const compsByPlayer = new Map<string, Set<string>>();
-    for (const s of stats) {
-      const cid = matchComp.get(s.matchId);
-      if (!cid) continue;
-      if (!compsByPlayer.has(s.playerId)) compsByPlayer.set(s.playerId, new Set());
-      compsByPlayer.get(s.playerId)!.add(cid);
-    }
+    const kFor = (id: string): number => {
+      if (fixedK) return fixedK;
+      if ((games.get(id) ?? 0) < P.provisionalGames) return P.kProvisional;
+      if ((cur.get(id) ?? BASE) >= P.kStableElo) return P.kStable;
+      return P.kBase;
+    };
 
     let processed = 0;
-    for (const m of matchList) {
-      const rows = byMatch.get(m.id);
-      if (!rows || rows.length === 0) continue;
-      const teamMap = new Map<string, { players: string[]; win: boolean }>();
-      for (const r of rows) {
-        if (!teamMap.has(r.teamId)) teamMap.set(r.teamId, { players: [], win: false });
-        const t = teamMap.get(r.teamId)!;
-        t.players.push(r.playerId);
-        if (r.victory) t.win = true;
-      }
-      const entries = Array.from(teamMap.values());
-      if (entries.length !== 2) continue;
-      const [A, B] = entries;
+    for (const m of ms) {
+      if (m.status !== "completed") continue;
+      if (!m.competitionId || !affects.has(m.competitionId)) continue;
+      if (opts.competitionId && m.competitionId !== opts.competitionId) continue;
+      if (!m.teamHomeId || !m.teamAwayId) continue;
+
+      const homeP = roster.get(m.teamHomeId) ?? [];
+      const awayP = roster.get(m.teamAwayId) ?? [];
+      if (homeP.length === 0 || awayP.length === 0) continue;
+
       const avg = (ps: string[]) => ps.reduce((s, p) => s + (cur.get(p) ?? BASE), 0) / ps.length;
-      const eloA = avg(A.players);
-      const eloB = avg(B.players);
-      const expA = 1 / (1 + Math.pow(10, (eloB - eloA) / 400));
-      const expB = 1 - expA;
-      const sA = A.win ? 1 : 0;
-      const sB = B.win ? 1 : 0;
-      for (const p of A.players) cur.set(p, (cur.get(p) ?? BASE) + K * (sA - expA));
-      for (const p of B.players) cur.set(p, (cur.get(p) ?? BASE) + K * (sB - expB));
+      const eloH = avg(homeP);
+      const eloA = avg(awayP);
+      const expH = 1 / (1 + Math.pow(10, (eloA - eloH) / 400));
+      const expA = 1 - expH;
+
+      let sH: number;
+      let sA: number;
+      if (m.winnerId === m.teamHomeId) { sH = 1; sA = 0; }
+      else if (m.winnerId === m.teamAwayId) { sH = 0; sA = 1; }
+      else { sH = 0.5; sA = 0.5; } // nul / vainqueur non renseigné
+
+      for (const p of homeP) {
+        cur.set(p, (cur.get(p) ?? BASE) + kFor(p) * (sH - expH));
+        games.set(p, (games.get(p) ?? 0) + 1);
+      }
+      for (const p of awayP) {
+        cur.set(p, (cur.get(p) ?? BASE) + kFor(p) * (sA - expA));
+        games.set(p, (games.get(p) ?? 0) + 1);
+      }
       processed++;
     }
 
     const allTiers = await db.select().from(tiers);
 
     await db.transaction(async (tx) => {
-      const [batch] = await tx.insert(changelogBatches).values({ note: `Recalcul Elo (K=${K})`, authorUserId: opts.authorUserId ?? null }).returning();
+      const note = fixedK ? `Recalcul Elo (K=${fixedK})` : "Recalcul Elo (K adaptatif)";
+      const [batch] = await tx.insert(changelogBatches).values({ note, authorUserId: opts.authorUserId ?? null }).returning();
       for (const p of allPlayers) {
         const newElo = Math.round(cur.get(p.id) ?? BASE);
         const oldElo = prev.get(p.id) ?? BASE;
@@ -101,6 +129,6 @@ export const eloEngine = {
       }
     });
 
-    return { players: allPlayers.length, matches: processed, k: K };
+    return { players: allPlayers.length, matches: processed, k: fixedK ?? P.kBase };
   },
 };
