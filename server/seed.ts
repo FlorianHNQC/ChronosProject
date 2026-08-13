@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "./db";
-import { tiers, hydraSections } from "@shared/schema";
+import { tiers, hydraSections, awards, competitions, players, teams, type InsertAward } from "@shared/schema";
 import { DEFAULT_TIERS } from "@shared/tiers";
 
 /**
@@ -13,6 +14,94 @@ export async function seedDefaults(): Promise<void> {
     console.log("[seed] paliers de tiers créés");
   }
   await seedHydraSections();
+  await seedAwards();
+}
+
+/**
+ * Amorce les awards de cérémonie de la dernière ligue (best-effort). Résout les
+ * joueurs/équipes par pseudo normalisé ; repli en texte si un nom ne correspond
+ * pas. Idempotent : ne fait rien si des awards existent déjà, ou si la
+ * compétition 2026 est absente.
+ */
+type SeedRecipient =
+  | { k: "player"; p: string }
+  | { k: "players"; p: string[] }
+  | { k: "team"; t: string }
+  | { k: "text"; t: string };
+type SeedSpec = { title: string; subtitle?: string; justification?: string; featured?: boolean; accent?: string; r: SeedRecipient };
+
+const AWARD_SPECS: SeedSpec[] = [
+  { title: "MVP", subtitle: "Most Valuable Player", featured: true, accent: "#FACC15",
+    justification: "La note la plus élevée de la ligue, avec une constance sur toute la saison.", r: { k: "player", p: "Bluny" } },
+  { title: "Meilleur buteur", accent: "#22C55E",
+    justification: "10 buts sur l'ensemble de la ligue.", r: { k: "player", p: "Kuro-Exodus777" } },
+  { title: "Meilleur assassin", accent: "#EF4444",
+    justification: "100 kills en 22 matchs — plus de 9 kills par game.", r: { k: "player", p: "SkuLL" } },
+  { title: "Meilleur contrôleur", accent: "#3B82F6",
+    justification: "19 morts seulement en 22 matchs, en playoffs dès sa première compétition.", r: { k: "player", p: "Silverthoon" } },
+  { title: "Meilleur capitaine", accent: "#F59E0B",
+    justification: "Du haut d'une série presque parfaite.", r: { k: "player", p: "Sabera" } },
+  { title: "Meilleur capitaine", accent: "#F59E0B",
+    justification: "A porté Crimson Vanguard tout au long de la ligue.", r: { k: "player", p: "1000 - 7 = ?" } },
+  { title: "Best Offensive Team", subtitle: "Les 5 joueurs les plus offensifs", accent: "#F97316",
+    r: { k: "players", p: ["SkuLL", "Yoshi", "1000 - 7 = ?", "Bluny", "Himeiros"] } },
+  { title: "Best Defensive Team", subtitle: "Les 5 joueurs les plus défensifs", accent: "#0EA5E9",
+    r: { k: "players", p: ["Silverthoon", "Manny", "Enzious1604", "Sabera", "TB|Le volleur"] } },
+  { title: "Prix de la persévérance", accent: "#A855F7",
+    justification: "Malgré les défaites, jamais abandonné et présent chaque soir. Bravo, rendez-vous l'an prochain.", r: { k: "team", t: "XxdominationxX" } },
+  { title: "Mention — le plus de morts", justification: "74 morts en 25 matchs. Mourir est une stratégie ; le plus important, c'est la victoire.", r: { k: "player", p: "Jack" } },
+  { title: "Meilleur modérateur — ligue", justification: "Merci pour l'aide sur cette organisation gigantesque.", r: { k: "text", t: "Marel & Ludger Rexxial" } },
+  { title: "Meilleur modérateur — admins", justification: "Pour la vitesse de remplissage des stats et la justesse dans l'exercice.", r: { k: "text", t: "AnnanGG" } },
+  { title: "Mentions spéciales", justification: "Merci aux joueurs qui se sont donnés sans être cités : Overlord Jojo, CryingMasta, et les joueurs d'Equitrix et de LargentFaitLeBonheur.", r: { k: "text", t: "Overlord Jojo · CryingMasta · Equitrix · LargentFaitLeBonheur" } },
+  { title: "Hommage — La St0rm", justification: "A dominé toutes les équipes de la ligue jusqu'à rencontrer plus fort. Presque parfait.", r: { k: "text", t: "La St0rm" } },
+];
+
+export async function seedAwards(): Promise<void> {
+  const existing = await db.select({ id: awards.id }).from(awards).limit(1);
+  if (existing.length > 0) return;
+
+  const comps = await db.select({ id: competitions.id, name: competitions.name }).from(competitions);
+  const comp = comps.find((c) => /2026/.test(c.name)) ?? comps.find((c) => /chronos/i.test(c.name));
+  if (!comp) return;
+
+  const pls = await db.select({ id: players.id, pseudo: players.pseudo }).from(players);
+  const tms = await db.select({ id: teams.id, name: teams.name }).from(teams).where(eq(teams.competitionId, comp.id));
+  const norm = (s: string) => s.trim().toLowerCase();
+  const byPseudo = new Map<string, string>();
+  for (const p of pls) if (!byPseudo.has(norm(p.pseudo))) byPseudo.set(norm(p.pseudo), p.id);
+  const byTeam = new Map<string, string>();
+  for (const t of tms) if (!byTeam.has(norm(t.name))) byTeam.set(norm(t.name), t.id);
+
+  const rows: InsertAward[] = AWARD_SPECS.map((s, i) => {
+    const base = {
+      competitionId: comp.id,
+      title: s.title,
+      subtitle: s.subtitle ?? null,
+      justification: s.justification ?? null,
+      accent: s.accent ?? null,
+      featured: !!s.featured,
+      orderIndex: i + 1,
+      published: true,
+    };
+    if (s.r.k === "player") {
+      const id = byPseudo.get(norm(s.r.p));
+      return id ? { ...base, recipientType: "player", playerId: id } : { ...base, recipientType: "text", freeText: s.r.p };
+    }
+    if (s.r.k === "players") {
+      const found = s.r.p.map((n) => byPseudo.get(norm(n))).filter((x): x is string => !!x);
+      return found.length === s.r.p.length
+        ? { ...base, recipientType: "players", playerIds: JSON.stringify(found) }
+        : { ...base, recipientType: "text", freeText: s.r.p.join(" · ") };
+    }
+    if (s.r.k === "team") {
+      const id = byTeam.get(norm(s.r.t));
+      return id ? { ...base, recipientType: "team", teamId: id } : { ...base, recipientType: "text", freeText: s.r.t };
+    }
+    return { ...base, recipientType: "text", freeText: s.r.t };
+  });
+
+  await db.insert(awards).values(rows);
+  console.log(`[seed] ${rows.length} awards de cérémonie créés (${comp.name})`);
 }
 
 /** Contenu rédactionnel par défaut des sections Hydra (éditable ensuite en ligne). */

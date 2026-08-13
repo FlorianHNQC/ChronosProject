@@ -58,6 +58,7 @@ const NAV: NavGroup[] = [
     items: [
       { label: "Console admin", href: "/admin", icon: Shield },
       { label: "Compétitions (admin)", href: "/admin/competitions", icon: Trophy },
+      { label: "Récompenses (admin)", href: "/admin/recompenses", icon: Award },
       { label: "Équipes (admin)", href: "/admin/equipes", icon: Users },
       { label: "Matchs (admin)", href: "/admin/matchs", icon: CalendarDays },
       { label: "Joueurs (admin)", href: "/admin/joueurs", icon: UserCog },

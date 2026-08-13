@@ -28,6 +28,7 @@ import { HydraAdminPage } from "@/pages/admin/hydra-admin";
 import { TiersAdminPage } from "@/pages/admin/tiers-admin";
 import { TagsAdminPage } from "@/pages/admin/tags-admin";
 import { CompetitionsAdminPage } from "@/pages/admin/competitions-admin";
+import { AwardsAdminPage } from "@/pages/admin/awards-admin";
 import { TeamsAdminPage } from "@/pages/admin/teams-admin";
 import { MatchesAdminPage } from "@/pages/admin/matches-admin";
 import { FusionAdminPage } from "@/pages/admin/fusion-admin";
@@ -128,6 +129,7 @@ function Shell() {
             <Route path="/admin/tiers" component={guarded(TiersAdminPage)} />
             <Route path="/admin/tags" component={guarded(TagsAdminPage)} />
             <Route path="/admin/competitions" component={guarded(CompetitionsAdminPage)} />
+            <Route path="/admin/recompenses" component={guarded(AwardsAdminPage)} />
             <Route path="/admin/equipes" component={guarded(TeamsAdminPage)} />
             <Route path="/admin/matchs" component={guarded(MatchesAdminPage)} />
             <Route path="/admin/fusion" component={guarded(FusionAdminPage)} />

@@ -330,6 +330,30 @@ export const seasonAwards = pgTable("season_awards", {
   published: boolean("published").notNull().default(false),
 });
 
+// Palmarès de cérémonie : awards riches, groupés par compétition. Récipiendaire
+// flexible : joueur, équipe, liste de joueurs (best team) ou texte libre (modérateurs…).
+export const awards = pgTable("awards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionId: varchar("competition_id").references(() => competitions.id),
+  title: text("title").notNull(),
+  subtitle: text("subtitle"),
+  justification: text("justification"),
+  // player | team | players | text
+  recipientType: text("recipient_type").notNull().default("player"),
+  playerId: varchar("player_id").references(() => players.id),
+  teamId: varchar("team_id").references(() => teams.id),
+  playerIds: text("player_ids"), // JSON: string[] (pour recipientType "players")
+  freeText: text("free_text"), // pour recipientType "text"
+  accent: text("accent"), // couleur d'accent hex optionnelle
+  featured: boolean("featured").notNull().default(false), // met en avant (ex. MVP)
+  orderIndex: integer("order_index").notNull().default(0),
+  published: boolean("published").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertAwardSchema = createInsertSchema(awards).omit({ id: true, createdAt: true });
+export type Award = typeof awards.$inferSelect;
+export type InsertAward = typeof awards.$inferInsert;
+
 /* ============================================================
  * PLAYOFFS  (leaguebs)
  * ========================================================== */
