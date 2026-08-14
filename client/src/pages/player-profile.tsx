@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { UserRound, ArrowLeft, Star, Link2 } from "lucide-react";
+import { UserRound, ArrowLeft, Star, Link2, Pencil } from "lucide-react";
 import { tierForElo } from "@shared/tiers";
+import { useMe } from "@/hooks/use-me";
 import type { Player, Tier } from "@shared/schema";
 
 type PlayerMatch = {
@@ -40,6 +41,22 @@ export function PlayerProfilePage() {
   const tags = (allTags ?? []).filter((t) => t.playerId === id);
   const tier = tierForElo(player?.elo ?? null, tiers ?? []);
 
+  const { isAdmin } = useMe();
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [pseudo, setPseudo] = useState("");
+  const [nationality, setNationality] = useState("");
+  const saveProfile = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/players/${id}`, { pseudo, nationality }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/players", id, "one"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      setEditing(false);
+      toast({ title: "Profil mis à jour" });
+    },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
+
   const agg = useMemo(() => {
     const h = history ?? [];
     if (h.length === 0) return null;
@@ -66,9 +83,27 @@ export function PlayerProfilePage() {
         ) : (
           <div className="h-20 w-20 rounded-xl bg-muted flex items-center justify-center ring-1 ring-border"><UserRound className="h-10 w-10 text-muted-foreground" /></div>
         )}
-        <div>
-          <h1 className="text-2xl font-bold">{player?.pseudo ?? "…"}</h1>
+        <div className="min-w-0">
+          {editing ? (
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <Input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="Pseudo" className="h-9 w-48" />
+              <Input value={nationality} onChange={(e) => setNationality(e.target.value)} placeholder="Nationalité (ex. BJ)" className="h-9 w-36" />
+              <Button size="sm" disabled={saveProfile.isPending || !pseudo.trim()} onClick={() => saveProfile.mutate()}>Enregistrer</Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Annuler</Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{player?.pseudo ?? "…"}</h1>
+              {isAdmin && (
+                <Button size="icon" variant="ghost" className="h-7 w-7" title="Modifier le profil"
+                  onClick={() => { setPseudo(player?.pseudo ?? ""); setNationality(player?.nationality ?? ""); setEditing(true); }}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {player?.nationality && <span className="text-xs text-muted-foreground">{player.nationality}</span>}
             {tier && (
               <span className="text-xs font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: tier.color ?? "#666" }}>{tier.code}</span>
             )}

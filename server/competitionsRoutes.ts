@@ -89,6 +89,15 @@ export function registerCompetitionsRoutes(app: Express) {
     }
   });
 
+  app.delete("/api/competitions/:id", async (req, res, next) => {
+    try {
+      await competitionsStore.remove(req.params.id);
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
   // Clôture officielle → archivée (données historiques, lecture seule).
   app.post("/api/competitions/:id/archive", async (req, res, next) => {
     try {

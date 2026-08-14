@@ -65,7 +65,6 @@ const NAV: NavGroup[] = [
       { label: "Hydra (admin)", href: "/admin/hydra", icon: Sparkles },
       { label: "Tiers (admin)", href: "/admin/tiers", icon: SlidersHorizontal },
       { label: "Tags (admin)", href: "/admin/tags", icon: Tags },
-      { label: "Fusion doublons", href: "/admin/fusion", icon: UserCog },
       { label: "Validation compo", href: "/admin/validation", icon: ClipboardCheck },
       { label: "Drifters", href: "/admin/drifters", icon: Shuffle },
     ],

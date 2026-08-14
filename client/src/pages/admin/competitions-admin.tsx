@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Archive, Copy, Play } from "lucide-react";
+import { Plus, Archive, Copy, Play, Pencil, Trash2 } from "lucide-react";
 import type { Competition } from "@shared/schema";
 
 const TYPES = [
@@ -53,6 +53,16 @@ export function CompetitionsAdminPage() {
   const clone = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/competitions/${id}/clone`),
     onSuccess: () => { invalidate(); toast({ title: "Nouvelle édition créée", description: "Brouillon au même format." }); },
+  });
+  const rename = useMutation({
+    mutationFn: (v: { id: string; name: string }) => apiRequest("PATCH", `/api/competitions/${v.id}`, { name: v.name }),
+    onSuccess: () => { invalidate(); toast({ title: "Renommée" }); },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
+  const del = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/competitions/${id}`),
+    onSuccess: () => { invalidate(); toast({ title: "Supprimée" }); },
+    onError: (e: Error) => toast({ title: "Suppression impossible", description: e.message, variant: "destructive" }),
   });
 
   const byStatus = (s: string) => (comps ?? []).filter((c) => c.status === s);
@@ -115,6 +125,14 @@ export function CompetitionsAdminPage() {
                   )}
                   <Button size="sm" variant="ghost" disabled={clone.isPending} onClick={() => clone.mutate(c.id)} title="Nouvelle édition (même format)">
                     <Copy className="h-4 w-4 mr-1" />Cloner
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" title="Renommer"
+                    onClick={() => { const n = window.prompt("Nouveau nom", c.name); if (n && n.trim()) rename.mutate({ id: c.id, name: n.trim() }); }}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Supprimer"
+                    onClick={() => { if (confirm(`Supprimer « ${c.name} » ? (impossible si des équipes/matchs y sont rattachés)`)) del.mutate(c.id); }}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </Card>
               ))}

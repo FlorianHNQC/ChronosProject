@@ -64,6 +64,12 @@ export const competitionsStore = {
     return row;
   },
 
+  /** Supprime une compétition (et ses phases). Échoue si des données y sont rattachées (FK). */
+  async remove(id: string): Promise<void> {
+    await db.delete(competitionPhases).where(eq(competitionPhases.competitionId, id));
+    await db.delete(competitions).where(eq(competitions.id, id));
+  },
+
   /** Nouvelle édition sous le même format (format seul, aucune donnée). */
   async cloneFormat(id: string): Promise<Competition | undefined> {
     const src = await this.get(id);

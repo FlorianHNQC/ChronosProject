@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { UserRound, RefreshCw } from "lucide-react";
+import { UserRound, RefreshCw, Search } from "lucide-react";
 import { tierForElo } from "@shared/tiers";
 import { RANKS, seedEloFromRank } from "@shared/rankElo";
 import type { Competition, Player, Tier } from "@shared/schema";
@@ -18,6 +18,10 @@ export function HydraAdminPage() {
   const { data: players } = useQuery<Player[]>({ queryKey: ["/api/players"] });
   const { data: tiers } = useQuery<Tier[]>({ queryKey: ["/api/tiers"] });
   const { data: comps } = useQuery<Competition[]>({ queryKey: ["/api/competitions"] });
+  const [q, setQ] = useState("");
+  const filtered = (players ?? [])
+    .filter((p) => { const t = q.trim().toLowerCase(); return !t || p.pseudo.toLowerCase().includes(t) || (p.playerTag ?? "").toLowerCase().includes(t); })
+    .sort((a, b) => a.pseudo.localeCompare(b.pseudo));
 
   return (
     <div className="w-full px-6 py-8">
@@ -33,20 +37,26 @@ export function HydraAdminPage() {
 
       <EloParamsCard />
 
-      <h2 className="font-semibold mb-1">Elo de départ par joueur</h2>
+      <div className="flex items-center gap-3 mb-1 flex-wrap">
+        <h2 className="font-semibold">Elo de départ par joueur</h2>
+        <div className="relative ml-auto w-64 max-w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un joueur…" className="pl-9 h-9" />
+        </div>
+      </div>
       <p className="text-xs text-muted-foreground mb-3">
         L'évaluation préliminaire de chaque joueur. Enregistrer relance automatiquement le recalcul pour l'appliquer.
       </p>
       <div className="space-y-2">
-        {(players ?? []).map((p) => (
+        {filtered.map((p) => (
           <EloRow key={p.id} player={p} tiers={tiers ?? []} onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["/api/players"] });
             queryClient.invalidateQueries({ queryKey: ["/api/hydra/changelog"] });
             toast({ title: "Elo mis à jour", description: p.pseudo });
           }} />
         ))}
-        {(!players || players.length === 0) && (
-          <p className="text-sm text-muted-foreground">Aucun joueur. Ajoutez-en d'abord.</p>
+        {filtered.length === 0 && (
+          <p className="text-sm text-muted-foreground">{q ? "Aucun joueur ne correspond." : "Aucun joueur. Ajoutez-en d'abord."}</p>
         )}
       </div>
     </div>
