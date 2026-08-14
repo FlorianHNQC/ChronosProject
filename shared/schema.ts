@@ -92,7 +92,30 @@ export const competitions = pgTable("competitions", {
   status: text("status").default("draft"),
   closedAt: timestamp("closed_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  // Dates du tournoi.
+  startsAt: timestamp("starts_at"),
+  endsAt: timestamp("ends_at"),
+  // Options de format (créateur de tournoi).
+  teamSize: integer("team_size").default(3), // 1 solo, 2 duo, 3 trio, 5 équipe
+  randomTeams: boolean("random_teams").default(false),
+  avgEloCap: integer("avg_elo_cap"), // moyenne d'Elo max par équipe (null = aucune)
+  minElo: integer("min_elo"), // Elo minimum pour participer (null = aucun)
+  noRookies: boolean("no_rookies").default(false),
 });
+
+// Phases d'une compétition : ordre + type de format + config (JSON libre).
+export const competitionPhases = pgTable("competition_phases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionId: varchar("competition_id").references(() => competitions.id).notNull(),
+  orderIndex: integer("order_index").notNull().default(0),
+  name: text("name").notNull(),
+  // season | round_robin | swiss | groups | bracket | random
+  type: text("type").notNull(),
+  config: text("config"), // JSON : { rounds?, groups?, qualifiers?, bestOf?, doubleElim?, mode? … }
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertCompetitionPhaseSchema = createInsertSchema(competitionPhases).omit({ id: true, createdAt: true });
+export type CompetitionPhase = typeof competitionPhases.$inferSelect;
 
 /* ============================================================
  * ÉQUIPES  (leaguebs — superset)

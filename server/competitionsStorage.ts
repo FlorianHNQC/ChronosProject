@@ -8,13 +8,35 @@
  *
  * L'Elo/Hydra est indépendant des ligues : rien ici ne le touche.
  */
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "./db";
-import { competitions, type Competition, type InsertCompetition } from "@shared/schema";
+import { competitions, competitionPhases, type Competition, type InsertCompetition, type CompetitionPhase } from "@shared/schema";
+
+type PhaseInput = { name?: string; type?: string; config?: unknown };
 
 export const competitionsStore = {
   list(): Promise<Competition[]> {
     return db.select().from(competitions).orderBy(desc(competitions.createdAt));
+  },
+
+  listPhases(competitionId: string): Promise<CompetitionPhase[]> {
+    return db.select().from(competitionPhases).where(eq(competitionPhases.competitionId, competitionId)).orderBy(asc(competitionPhases.orderIndex));
+  },
+
+  /** Remplace toutes les phases d'une compétition (dans l'ordre fourni). */
+  async replacePhases(competitionId: string, phases: PhaseInput[]): Promise<void> {
+    await db.delete(competitionPhases).where(eq(competitionPhases.competitionId, competitionId));
+    if (phases.length) {
+      await db.insert(competitionPhases).values(
+        phases.map((p, i) => ({
+          competitionId,
+          orderIndex: i,
+          name: p.name || `Phase ${i + 1}`,
+          type: p.type || "season",
+          config: p.config == null ? null : typeof p.config === "string" ? p.config : JSON.stringify(p.config),
+        })),
+      );
+    }
   },
 
   async get(id: string): Promise<Competition | undefined> {

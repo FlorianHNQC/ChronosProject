@@ -29,6 +29,7 @@ import { TagsAdminPage } from "@/pages/admin/tags-admin";
 import { CompetitionsAdminPage } from "@/pages/admin/competitions-admin";
 import { AwardsAdminPage } from "@/pages/admin/awards-admin";
 import { RandomAdminPage } from "@/pages/admin/random-admin";
+import { TournamentBuilderPage } from "@/pages/admin/tournament-builder";
 import { TeamsAdminPage } from "@/pages/admin/teams-admin";
 import { MatchesAdminPage } from "@/pages/admin/matches-admin";
 import { FusionAdminPage } from "@/pages/admin/fusion-admin";
@@ -129,6 +130,7 @@ function Shell() {
             <Route path="/admin/tags" component={guarded(TagsAdminPage)} />
             <Route path="/admin/competitions" component={guarded(CompetitionsAdminPage)} />
             <Route path="/admin/recompenses" component={guarded(AwardsAdminPage)} />
+            <Route path="/admin/tournoi" component={guarded(TournamentBuilderPage)} />
             <Route path="/admin/aleatoire" component={guarded(RandomAdminPage)} />
             <Route path="/admin/equipes" component={guarded(TeamsAdminPage)} />
             <Route path="/admin/matchs" component={guarded(MatchesAdminPage)} />
