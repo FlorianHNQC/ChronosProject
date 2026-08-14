@@ -129,13 +129,36 @@ const DEFAULT_HYDRA_SECTIONS = [
     title: "Notes (notation)",
     orderIndex: 2,
     body:
-      "Le classement repose sur un **Elo**, mis à jour à partir des **résultats** des matchs (le vainqueur), et non des statistiques en jeu, jugées peu fiables. Le **tier** (T0, T1…) n'est qu'une lecture de l'Elo selon des seuils configurables.\n\n" +
-      "**Comment l'Elo évolue :**\n" +
-      "- Chaque joueur part d'un **Elo de départ** (une évaluation préliminaire) ; les matchs le font ensuite monter ou descendre.\n" +
-      "- Après un match, l'Elo moyen de l'équipe est comparé à celui de l'adversaire : **battre plus fort que soi rapporte beaucoup**, perdre contre plus faible coûte cher (et inversement). Un nul vaut un demi-résultat.\n" +
-      "- La vitesse de variation (le **facteur K**) est **adaptative** : élevée pour les nouveaux (calibrage rapide), plus faible pour les joueurs confirmés (stabilité en haut de classement).\n" +
-      "- Seules les compétitions marquées **compétitives** influencent l'Elo.\n\n" +
-      "Les seuils des tiers comme les paramètres du moteur (K, base…) sont **réglables par les administrateurs** : le classement colle à la réalité de la scène plutôt qu'à une grille figée.",
+      "**En bref.** Ton Elo part d'une évaluation de départ basée surtout sur ton **rang Ranked**, puis chaque match le fait varier : tu gagnes des points en battant plus fort que toi, tu en perds en tombant contre plus faible. Ton tier (T0, T1…) n'est qu'une tranche d'Elo.\n\n" +
+      "## Ce qui compte\n" +
+      "On se base sur le **vainqueur officiel** du match, pas sur les statistiques en jeu (peu fiables). Chaque match vaut : **victoire = 1**, **défaite = 0**, **nul = 0,5**. Seules les compétitions marquées **compétitives** comptent, et seuls les matchs **terminés** sont pris en compte.\n\n" +
+      "## Le calcul, match par match\n" +
+      "Pour un match entre l'équipe A et l'équipe B :\n\n" +
+      "**1. Force de chaque équipe** — la moyenne de l'Elo de ses joueurs à ce moment-là (on note EloA et EloB).\n\n" +
+      "**2. Score attendu** (la probabilité de gagner) : Attendu(A) = 1 ÷ (1 + 10^((EloB − EloA) ÷ 400)), et Attendu(B) = 1 − Attendu(A). Même niveau → 50 % chacun ; 400 points d'écart → le favori a ~10× plus de chances de gagner.\n\n" +
+      "**3. Variation de chaque joueur** : nouvel Elo = ancien Elo + K × (Résultat − Attendu), où Résultat (1, 0 ou 0,5) et Attendu sont ceux de son équipe. Battre un favori (Attendu faible) rapporte gros ; perdre contre un outsider coûte cher. Tous les joueurs du roster reçoivent la variation de l'équipe (chacun pondéré par son propre K).\n\n" +
+      "## Le facteur K (l'ampleur des variations)\n" +
+      "K est **adaptatif**, calculé par joueur :\n" +
+      "- **Provisoire** — tant qu'un joueur a joué moins de **10 matchs** : K = **40** (calibrage rapide, pour trouver vite son niveau).\n" +
+      "- **Standard** — ensuite : K = **24**.\n" +
+      "- **Confirmé** — au-dessus de **1900** d'Elo : K = **16** (variations adoucies, pour stabiliser le haut du classement).\n\n" +
+      "Ces valeurs (10 matchs, 40/24/16, seuil 1900) sont **réglables par les admins**, qui peuvent aussi forcer un K unique lors d'un recalcul.\n\n" +
+      "## L'Elo de départ (évaluation préliminaire)\n" +
+      "Avant tout match, chaque joueur reçoit un Elo de base déterminé surtout par son **rang Ranked** (poids très fort), avec un **petit bonus de trophées** (+1 Elo par 2000 trophées, plafonné à +50 — jamais assez pour dépasser un rang supérieur).\n\n" +
+      "| Rang Ranked | Elo de base |\n" +
+      "| --- | --- |\n" +
+      "| Bronze → Or | ~950–1080 |\n" +
+      "| Diamant I (plancher) | 1100 |\n" +
+      "| Diamant II–III | 1140–1180 |\n" +
+      "| Mythique I / II / III | 1250 / 1325 / **1400** |\n" +
+      "| Légendaire I / II / III | **1550** / 1650 / 1750 |\n" +
+      "| Master 1 / 2 / 3 | 1900 / 2000 / 2100 |\n" +
+      "| Pro | 2250 |\n\n" +
+      "Pourquoi ce barème : Diamant I est un plancher que tout le monde atteint (faible signal) ; le **saut Mythique III → Légendaire I** marque le vrai clivage faible/fort ; Master est l'élite. Le rang écrase les trophées — un **Master 1 à 40k** (≈ 1920) reste très au-dessus d'un **Mythique III à 120k** (≈ 1450). Le classement est ensuite obtenu en **rejouant tous les matchs** depuis cet Elo de départ, donc cohérent et reproductible.\n\n" +
+      "## De l'Elo au tier\n" +
+      "Le tier est une simple **tranche d'Elo** : chaque tier a un seuil minimum (T0 ≥ 2000, T1 ≥ 1700… configurables). Ton tier = la tranche où tombe ton Elo.\n\n" +
+      "## Exemple concret\n" +
+      "Une équipe à 1500 affronte une équipe à 1700. Attendu de l'équipe à 1500 ≈ 1 ÷ (1 + 10^((1700−1500)÷400)) ≈ **0,24** (24 % de chances). Si elle **gagne** (Résultat = 1) en régime standard (K = 24) : +24 × (1 − 0,24) ≈ **+18 Elo**. Si elle **perd** (Résultat = 0) : +24 × (0 − 0,24) ≈ **−6 Elo**. Battre plus fort rapporte donc bien plus que perdre contre plus fort ne coûte.",
   },
   {
     key: "criteria",

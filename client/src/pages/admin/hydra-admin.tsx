@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { UserRound, RefreshCw } from "lucide-react";
 import { tierForElo } from "@shared/tiers";
+import { RANKS, seedEloFromRank } from "@shared/rankElo";
 import type { Competition, Player, Tier } from "@shared/schema";
 
 /**
@@ -153,6 +154,9 @@ function EloRow({ player, tiers, onSaved }: { player: Player; tiers: Tier[]; onS
   const { toast } = useToast();
   // On règle l'Elo de DÉPART (évaluation préliminaire) ; le recalcul l'applique.
   const [elo, setElo] = useState<string>(String(player.seedElo ?? 1000));
+  const [showRank, setShowRank] = useState(false);
+  const [rankKey, setRankKey] = useState("");
+  const [trophies, setTrophies] = useState("");
 
   const save = useMutation({
     mutationFn: () => apiRequest("PATCH", `/api/players/${player.id}/elo`, { elo: Number(elo) }),
@@ -161,29 +165,51 @@ function EloRow({ player, tiers, onSaved }: { player: Player; tiers: Tier[]; onS
   });
 
   const previewTier = tierForElo(Number(elo), tiers);
+  const suggestion = rankKey ? seedEloFromRank(rankKey, Number(trophies) || 0) : null;
 
   return (
-    <Card className="flex items-center gap-3 p-2.5">
-      {player.avatarUrl ? (
-        <img src={player.avatarUrl} alt={player.pseudo} className="h-9 w-9 rounded object-cover bg-muted" />
-      ) : (
-        <div className="h-9 w-9 rounded bg-muted flex items-center justify-center">
-          <UserRound className="h-5 w-5 text-muted-foreground" />
+    <Card className="p-2.5">
+      <div className="flex items-center gap-3">
+        {player.avatarUrl ? (
+          <img src={player.avatarUrl} alt={player.pseudo} className="h-9 w-9 rounded object-cover bg-muted" />
+        ) : (
+          <div className="h-9 w-9 rounded bg-muted flex items-center justify-center">
+            <UserRound className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="font-medium truncate">{player.pseudo}</div>
+          <div className="text-xs text-muted-foreground truncate">{player.playerTag ?? "—"}</div>
+        </div>
+        {previewTier && (
+          <span className="text-xs font-bold px-2 py-0.5 rounded text-white shrink-0" style={{ backgroundColor: previewTier.color ?? "#666" }}>
+            {previewTier.code}
+          </span>
+        )}
+        <Input type="number" value={elo} onChange={(e) => setElo(e.target.value)} className="w-24 h-9" />
+        <Button size="sm" variant="ghost" onClick={() => setShowRank((s) => !s)} title="Suggérer l'Elo de départ depuis le rang Ranked">
+          Rang
+        </Button>
+        <Button size="sm" disabled={save.isPending} onClick={() => save.mutate()}>
+          {save.isPending ? "…" : "Définir"}
+        </Button>
+      </div>
+
+      {showRank && (
+        <div className="flex items-center gap-2 mt-2 flex-wrap pl-12 text-sm">
+          <span className="text-xs text-muted-foreground">Rang Ranked</span>
+          <select value={rankKey} onChange={(e) => setRankKey(e.target.value)} className="h-8 rounded-md border bg-background px-2 text-sm">
+            <option value="">—</option>
+            {RANKS.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+          </select>
+          <span className="text-xs text-muted-foreground">Trophées</span>
+          <Input type="number" value={trophies} onChange={(e) => setTrophies(e.target.value)} placeholder="ex. 45000" className="w-28 h-8" />
+          <Button size="sm" variant="outline" disabled={suggestion == null} onClick={() => suggestion != null && setElo(String(suggestion))}>
+            Suggérer
+          </Button>
+          {suggestion != null && <span className="text-xs text-muted-foreground">→ {suggestion} Elo de départ</span>}
         </div>
       )}
-      <div className="min-w-0 flex-1">
-        <div className="font-medium truncate">{player.pseudo}</div>
-        <div className="text-xs text-muted-foreground truncate">{player.playerTag ?? "—"}</div>
-      </div>
-      {previewTier && (
-        <span className="text-xs font-bold px-2 py-0.5 rounded text-white shrink-0" style={{ backgroundColor: previewTier.color ?? "#666" }}>
-          {previewTier.code}
-        </span>
-      )}
-      <Input type="number" value={elo} onChange={(e) => setElo(e.target.value)} className="w-24 h-9" />
-      <Button size="sm" disabled={save.isPending} onClick={() => save.mutate()}>
-        {save.isPending ? "…" : "Définir"}
-      </Button>
     </Card>
   );
 }

@@ -47,9 +47,14 @@ function inline(text: string, keyBase: string): React.ReactNode[] {
   return nodes;
 }
 
+const isTableRow = (l: string) => /^\s*\|.*\|\s*$/.test(l);
+const isTableSep = (l: string) => /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(l);
+const splitRow = (l: string) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+
 /**
  * Rendu texte enrichi léger : titres (`##`, `###`), paragraphes (ligne vide),
- * listes `- `, et inline **gras** / *italique* / [liens](url).
+ * listes `- `, tableaux markdown (`| a | b |` + `| --- | --- |`), et inline
+ * **gras** / *italique* / [liens](url).
  */
 function RichText({ text }: { text: string }) {
   const lines = text.split("\n");
@@ -85,8 +90,48 @@ function RichText({ text }: { text: string }) {
       para = [];
     }
   };
-  for (const raw of lines) {
-    const line = raw.replace(/\s+$/, "");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].replace(/\s+$/, "");
+
+    // Tableau : ligne d'en-tête « | … | » suivie d'une ligne séparatrice « | --- | --- | ».
+    if (isTableRow(line) && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      flushList();
+      flushPara();
+      const header = splitRow(line);
+      const rows: string[][] = [];
+      let j = i + 2;
+      while (j < lines.length && isTableRow(lines[j])) {
+        rows.push(splitRow(lines[j]));
+        j++;
+      }
+      const b = blocks.length;
+      blocks.push(
+        <div key={`t-${b}`} className="overflow-x-auto mb-3">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b">
+                {header.map((h, k) => (
+                  <th key={k} className="text-left font-semibold py-1.5 pr-4">{inline(h, `th-${b}-${k}`)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, ri) => (
+                <tr key={ri} className="border-b last:border-0 hover:bg-muted/30">
+                  {r.map((c, ci) => (
+                    <td key={ci} className="py-1.5 pr-4 align-top">{inline(c, `td-${b}-${ri}-${ci}`)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
+      i = j - 1;
+      continue;
+    }
+
     if (line.trim() === "") {
       flushList();
       flushPara();
@@ -153,7 +198,8 @@ export function HydraSectionBlock({ section, isAdmin }: { section: HydraSection;
         />
         <p className="text-[11px] text-muted-foreground">
           Formats : <code>**gras**</code>, <code>*italique*</code>, titres <code>## Titre</code>,
-          listes <code>- élément</code>, liens <code>[libellé](https://…)</code>, ligne vide = nouveau paragraphe.
+          listes <code>- élément</code>, liens <code>[libellé](https://…)</code>, tableaux
+          <code>| a | b |</code> puis <code>| --- | --- |</code>, ligne vide = nouveau paragraphe.
         </p>
         <div className="flex gap-2">
           <Button size="sm" disabled={save.isPending || !title.trim()} onClick={() => save.mutate()}>
