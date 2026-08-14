@@ -363,6 +363,45 @@ export type Award = typeof awards.$inferSelect;
 export type InsertAward = typeof awards.$inferInsert;
 
 /* ============================================================
+ * TOURNOI À ÉQUIPES ALÉATOIRES (format "chaos" : trios tirés au sort chaque tour)
+ * ========================================================== */
+// Pool de joueurs inscrits à l'événement aléatoire.
+export const randomParticipants = pgTable("random_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionId: varchar("competition_id").references(() => competitions.id).notNull(),
+  playerId: varchar("player_id").references(() => players.id).notNull(),
+}, (t) => ({
+  uniq: uniqueIndex("random_participants_idx").on(t.competitionId, t.playerId),
+}));
+
+// Un tour : mode de jeu du jour, bans, note. Les équipes changent à chaque tour.
+export const randomRounds = pgTable("random_rounds", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionId: varchar("competition_id").references(() => competitions.id).notNull(),
+  roundNumber: integer("round_number").notNull().default(1),
+  gameMode: text("game_mode"),
+  bans: text("bans"), // ex. "Piper, Edgar"
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Un affrontement 3v3 d'un tour : deux trios (listes de playerId en JSON) + résultat.
+export const randomMatches = pgTable("random_matches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roundId: varchar("round_id").references(() => randomRounds.id).notNull(),
+  competitionId: varchar("competition_id").references(() => competitions.id).notNull(),
+  teamA: text("team_a").notNull(), // JSON: string[] de playerId
+  teamB: text("team_b").notNull(),
+  scoreA: integer("score_a").default(0),
+  scoreB: integer("score_b").default(0),
+  winner: text("winner"), // "a" | "b" | null
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type RandomRound = typeof randomRounds.$inferSelect;
+export type RandomMatch = typeof randomMatches.$inferSelect;
+
+/* ============================================================
  * PLAYOFFS  (leaguebs)
  * ========================================================== */
 export const playoffSeries = pgTable("playoff_series", {

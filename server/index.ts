@@ -9,6 +9,7 @@ import { registerHydraAdminRoutes } from "./hydraAdminRoutes";
 import { registerHydraSectionsRoutes } from "./hydraSectionsRoutes";
 import { registerSettingsRoutes } from "./settingsRoutes";
 import { registerAwardsRoutes } from "./awardsRoutes";
+import { registerRandomRoutes } from "./randomRoutes";
 import { registerCompetitionsRoutes } from "./competitionsRoutes";
 import { registerTeamsRoutes } from "./teamsRoutes";
 import { registerMatchesRoutes } from "./matchesRoutes";
@@ -91,6 +92,7 @@ app.use((req, res, next) => {
   registerHydraSectionsRoutes(app);
   registerSettingsRoutes(app);
   registerAwardsRoutes(app);
+  registerRandomRoutes(app);
   registerCompetitionsRoutes(app);
   registerTeamsRoutes(app);
   registerMatchesRoutes(app);
