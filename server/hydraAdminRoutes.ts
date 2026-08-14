@@ -36,7 +36,9 @@ export function registerHydraAdminRoutes(app: Express) {
 
   app.patch("/api/tags/:id", async (req, res, next) => {
     try {
-      const updated = await hydraAdmin.updateTag(req.params.id, req.body ?? {});
+      const body = { ...(req.body ?? {}) };
+      if (body.eloBonus !== undefined) body.eloBonus = Number(body.eloBonus) || 0;
+      const updated = await hydraAdmin.updateTag(req.params.id, body);
       if (!updated) return res.status(404).json({ message: "Tag introuvable." });
       res.json(updated);
     } catch (e) {

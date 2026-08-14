@@ -129,7 +129,7 @@ const DEFAULT_HYDRA_SECTIONS = [
     title: "Notes (notation)",
     orderIndex: 2,
     body:
-      "**En bref.** Ton Elo part d'une évaluation de départ basée surtout sur ton **rang Ranked**, puis chaque match le fait varier : tu gagnes des points en battant plus fort que toi, tu en perds en tombant contre plus faible. Ton tier (T0, T1…) n'est qu'une tranche d'Elo.\n\n" +
+      "**En bref — comment ton Elo bouge.** Tu démarres à une valeur estimée depuis ton **rang Ranked**. Ensuite, chaque match te déplace selon **l'écart entre le résultat et l'attendu** : battre plus fort que soi rapporte gros, tomber contre plus faible coûte cher, et gagner « comme prévu » ne rapporte presque rien. Les variations sont **plus fortes au début** (calibrage) puis s'assagissent, et tant que tu as **peu de matchs** ton Elo reste **ancré près de ton rang de départ**. Ton tier (T0, T1…) n'est qu'une tranche d'Elo.\n\n" +
       "## Ce qui compte\n" +
       "On se base sur le **vainqueur officiel** du match, pas sur les statistiques en jeu (peu fiables). Chaque match vaut : **victoire = 1**, **défaite = 0**, **nul = 0,5**. Seules les compétitions marquées **compétitives** comptent, et seuls les matchs **terminés** sont pris en compte.\n\n" +
       "## Le calcul, match par match\n" +
@@ -155,10 +155,21 @@ const DEFAULT_HYDRA_SECTIONS = [
       "| Master 1 / 2 / 3 | 1900 / 2000 / 2100 |\n" +
       "| Pro | 2250 |\n\n" +
       "Pourquoi ce barème : Diamant I est un plancher que tout le monde atteint (faible signal) ; le **saut Mythique III → Légendaire I** marque le vrai clivage faible/fort ; Master est l'élite. Le rang écrase les trophées — un **Master 1 à 40k** (≈ 1920) reste très au-dessus d'un **Mythique III à 120k** (≈ 1450). Le classement est ensuite obtenu en **rejouant tous les matchs** depuis cet Elo de départ, donc cohérent et reproductible.\n\n" +
+      "## L'ancrage au rang (régression)\n" +
+      "Avec peu de matchs, on ne laisse pas un joueur s'éloigner trop de son rang. L'Elo final est un mélange : **Elo = Départ + (Calculé − Départ) × matchs ÷ (matchs + confiance)**. Plus tu joues, plus les **résultats** priment ; avec un petit échantillon (ou une surperformance douteuse), tu restes **près de ton rang de départ**. Le curseur « confiance du rang » est réglable par les admins.\n\n" +
       "## De l'Elo au tier\n" +
       "Le tier est une simple **tranche d'Elo** : chaque tier a un seuil minimum (T0 ≥ 2000, T1 ≥ 1700… configurables). Ton tier = la tranche où tombe ton Elo.\n\n" +
+      "## Conséquences et limites assumées\n" +
+      "Le système privilégie des **résultats objectifs** et un **classement stable**. En contrepartie, on accepte quelques limites :\n" +
+      "- **Elo d'équipe, pas individuel** — on ne distingue pas un joueur *porté* d'un joueur *moteur* : les coéquipiers montent et descendent ensemble. Un carry gonfle mécaniquement ses coéquipiers plus faibles.\n" +
+      "- **Gagner ≠ monter** — l'Elo récompense le fait de dépasser l'attendu, pas le taux de victoire brut. Une équipe favorite qui gagne « normalement » bouge peu ; une équipe outsider qui gagne monte fort.\n" +
+      "- **Dépendance à l'évaluation de départ** — un rang mal saisi fausse le point de départ, et l'ancrage fait qu'un petit nombre de matchs ne le corrige pas entièrement.\n" +
+      "- **Roster entier** — faute de feuilles de match fiables, tous les joueurs inscrits au roster reçoivent les variations, même un remplaçant qui n'a pas joué.\n" +
+      "- **Stats en jeu ignorées** — kills, dégâts, etc. ne comptent pas (jugés non fiables) : seuls les résultats font l'Elo.\n" +
+      "- **Petits échantillons** — sur une saison courte, l'Elo reste une estimation ; d'où l'ancrage au rang.\n\n" +
+      "Ces choix sont **assumés** : mieux vaut un classement lisible et stable, quitte à ne pas capturer parfaitement chaque performance individuelle.\n\n" +
       "## Exemple concret\n" +
-      "Une équipe à 1500 affronte une équipe à 1700. Attendu de l'équipe à 1500 ≈ 1 ÷ (1 + 10^((1700−1500)÷400)) ≈ **0,24** (24 % de chances). Si elle **gagne** (Résultat = 1) en régime standard (K = 24) : +24 × (1 − 0,24) ≈ **+18 Elo**. Si elle **perd** (Résultat = 0) : +24 × (0 − 0,24) ≈ **−6 Elo**. Battre plus fort rapporte donc bien plus que perdre contre plus fort ne coûte.",
+      "Une équipe à 1500 affronte une équipe à 1700. Attendu de l'équipe à 1500 ≈ 1 ÷ (1 + 10^((1700−1500)÷400)) ≈ **0,24** (24 % de chances). Si elle **gagne** (Résultat = 1) en régime standard (K = 40) : +40 × (1 − 0,24) ≈ **+30 Elo**. Si elle **perd** (Résultat = 0) : +40 × (0 − 0,24) ≈ **−10 Elo**. Battre plus fort rapporte donc bien plus que perdre contre plus fort ne coûte.",
   },
   {
     key: "criteria",

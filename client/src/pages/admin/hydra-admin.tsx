@@ -165,6 +165,12 @@ function EloRow({ player, tiers, onSaved }: { player: Player; tiers: Tier[]; onS
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
 
+  const setMode = useMutation({
+    mutationFn: (mode: string) => apiRequest("PATCH", `/api/players/${player.id}`, { modeOverride: mode || null }),
+    onSuccess: onSaved,
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
+
   const previewTier = tierForElo(Number(elo), tiers);
   const suggestion = rankKey ? seedEloFromRank(rankKey, Number(trophies) || 0) : null;
 
@@ -187,6 +193,17 @@ function EloRow({ player, tiers, onSaved }: { player: Player; tiers: Tier[]; onS
             {previewTier.code}
           </span>
         )}
+        <select
+          value={player.modeOverride ?? ""}
+          onChange={(e) => setMode.mutate(e.target.value)}
+          className="h-9 rounded-md border bg-background px-1.5 text-xs shrink-0"
+          title="Statut Hydra — Auto = déduit (Rookie si 0 compétition, Réserve si inactif)"
+        >
+          <option value="">Auto</option>
+          <option value="joueurs">Joueurs</option>
+          <option value="rookie">Rookie</option>
+          <option value="reserve">Réserve</option>
+        </select>
         <Input type="number" value={elo} onChange={(e) => setElo(e.target.value)} className="w-24 h-9" />
         <Button size="sm" variant="ghost" onClick={() => setShowRank((s) => !s)} title="Suggérer l'Elo de départ depuis le rang Ranked">
           Rang

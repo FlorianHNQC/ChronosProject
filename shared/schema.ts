@@ -151,6 +151,8 @@ export const players = pgTable("players", {
   lastEloChangeAt: timestamp("last_elo_change_at"),
   // Compteur dénormalisé (aide le mode Rookie / seuils d'activité).
   competitionsPlayed: integer("competitions_played").default(0),
+  // Statut Hydra forcé par un admin (joueurs | rookie | reserve). null = déduit auto.
+  modeOverride: text("mode_override"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   uniqByTag: uniqueIndex("players_player_tag_idx").on(t.playerTag),
@@ -221,6 +223,9 @@ export const tags = pgTable("tags", {
   description: text("description"),
   color: varchar("color", { length: 7 }),
   isAuto: boolean("is_auto").default(false), // attribué automatiquement ?
+  // Bonus d'Elo de départ conféré par ce tag (palmarès). Seul le plus élevé des
+  // tags d'un joueur compte (pas de cumul). 0 = aucun.
+  eloBonus: integer("elo_bonus").default(0),
 });
 
 export const playerTags = pgTable("player_tags", {

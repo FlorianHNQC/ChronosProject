@@ -108,10 +108,15 @@ export async function registerRoutes(_httpServer: Server, app: Express) {
   // Mise à jour partielle manuelle (ex. nationalité).
   app.patch("/api/players/:id", async (req, res, next) => {
     try {
-      const { nationality, pseudo } = req.body ?? {};
+      const { nationality, pseudo, modeOverride } = req.body ?? {};
+      // Statut Hydra forcé : "joueurs" | "rookie" | "reserve", ou null/"" pour revenir en auto.
+      const validModes = ["joueurs", "rookie", "reserve"];
       const updated = await storage.updatePlayer(req.params.id, {
         ...(nationality !== undefined ? { nationality } : {}),
         ...(pseudo !== undefined ? { pseudo } : {}),
+        ...(modeOverride !== undefined
+          ? { modeOverride: validModes.includes(modeOverride) ? modeOverride : null }
+          : {}),
       });
       if (!updated) return res.status(404).json({ message: "Joueur introuvable." });
       res.json(updated);

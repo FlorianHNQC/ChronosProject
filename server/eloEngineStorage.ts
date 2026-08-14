@@ -16,7 +16,7 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "./db";
 import {
-  matches, teamPlayers, teams, competitions, players, tiers, changelogBatches, eloChangelog,
+  matches, teamPlayers, teams, competitions, players, tiers, tags, playerTags, changelogBatches, eloChangelog,
 } from "@shared/schema";
 import { tierForElo } from "@shared/tiers";
 import { eloParamsStore } from "./eloParamsStorage";
@@ -28,8 +28,21 @@ export const eloEngine = {
     const fixedK = opts.k && opts.k > 0 ? opts.k : null;
 
     const allPlayers = await db.select({ id: players.id, elo: players.elo, seedElo: players.seedElo }).from(players);
+
+    // Bonus de tag (palmarès) : on ne garde que le PLUS ÉLEVÉ des tags d'un joueur.
+    const tagRows = await db.select({ id: tags.id, eloBonus: tags.eloBonus }).from(tags);
+    const bonusByTag = new Map(tagRows.map((t) => [t.id, t.eloBonus ?? 0]));
+    const pts = await db.select({ playerId: playerTags.playerId, tagId: playerTags.tagId }).from(playerTags);
+    const tagBonus = new Map<string, number>();
+    for (const pt of pts) {
+      const b = bonusByTag.get(pt.tagId) ?? 0;
+      if (b > (tagBonus.get(pt.playerId) ?? 0)) tagBonus.set(pt.playerId, b);
+    }
+    // Elo de départ effectif = seed (rang) + meilleur bonus de tag.
+    const seedOf = (id: string, seedElo: number | null) => (seedElo ?? BASE) + (tagBonus.get(id) ?? 0);
+
     const prev = new Map<string, number>(allPlayers.map((p) => [p.id, p.elo ?? BASE]));
-    const cur = new Map<string, number>(allPlayers.map((p) => [p.id, p.seedElo ?? BASE]));
+    const cur = new Map<string, number>(allPlayers.map((p) => [p.id, seedOf(p.id, p.seedElo)]));
     const games = new Map<string, number>();
 
     // Compétitions qui comptent pour l'Elo.
@@ -118,7 +131,7 @@ export const eloEngine = {
         // Régression vers l'Elo de départ (rang) pondérée par le nombre de matchs :
         // Elo = Départ + (Calculé − Départ) × matchs / (matchs + priorGames).
         const raw = cur.get(p.id) ?? BASE;
-        const seed = p.seedElo ?? BASE;
+        const seed = seedOf(p.id, p.seedElo);
         const g = games.get(p.id) ?? 0;
         const shrunk = P.priorGames > 0 ? seed + (raw - seed) * (g / (g + P.priorGames)) : raw;
         const newElo = Math.round(shrunk);

@@ -21,8 +21,11 @@ type Mode = "joueurs" | "rookie" | "reserve";
 const DAY = 86400000;
 const RESERVE_DAYS = 90; // inactivité au-delà de laquelle un joueur passe en Réserve
 
-/** Mode dérivé d'un joueur (non stocké). */
+/** Mode d'un joueur : override admin s'il existe, sinon déduit. */
 function playerMode(p: Player): Mode {
+  if (p.modeOverride === "joueurs" || p.modeOverride === "rookie" || p.modeOverride === "reserve") {
+    return p.modeOverride;
+  }
   if ((p.competitionsPlayed ?? 0) === 0) return "rookie";
   if (p.lastEloChangeAt && Date.now() - new Date(p.lastEloChangeAt).getTime() > RESERVE_DAYS * DAY) return "reserve";
   return "joueurs";

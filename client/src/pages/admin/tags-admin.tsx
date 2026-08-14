@@ -99,18 +99,13 @@ export function TagsAdminPage() {
             <Plus className="h-4 w-4 mr-1" />Créer
           </Button>
         </form>
-        <div className="flex flex-wrap gap-2">
+        <p className="text-xs text-muted-foreground mb-2">
+          Bonus Elo : ajouté à l'<b>Elo de départ</b> du joueur. Seul le tag au bonus le plus élevé compte (pas de cumul).
+          Réservé aux palmarès ; laisse 0 pour les tags de comportement.
+        </p>
+        <div className="space-y-2">
           {(tags ?? []).map((t) => (
-            <span
-              key={t.id}
-              className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded text-white"
-              style={{ backgroundColor: t.color ?? "#666" }}
-            >
-              {t.label}
-              <button onClick={() => deleteTag.mutate(t.id)} title="Supprimer" className="opacity-80 hover:opacity-100">
-                <X className="h-3 w-3" />
-              </button>
-            </span>
+            <TagRow key={t.id} tag={t} onDelete={() => deleteTag.mutate(t.id)} />
           ))}
           {(!tags || tags.length === 0) && <span className="text-sm text-muted-foreground">Aucun tag.</span>}
         </div>
@@ -160,6 +155,39 @@ export function TagsAdminPage() {
         {(!players || players.length === 0) && <p className="text-sm text-muted-foreground">Aucun joueur.</p>}
       </div>
     </div>
+  );
+}
+
+function TagRow({ tag, onDelete }: { tag: Tag; onDelete: () => void }) {
+  const { toast } = useToast();
+  const [bonus, setBonus] = useState(String(tag.eloBonus ?? 0));
+
+  const save = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/tags/${tag.id}`, { eloBonus: Number(bonus) || 0 }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
+      toast({ title: "Bonus mis à jour", description: tag.label });
+    },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <Card className="flex items-center gap-2 p-2 flex-wrap">
+      <span className="text-xs font-medium px-2 py-1 rounded text-white" style={{ backgroundColor: tag.color ?? "#666" }}>
+        {tag.label}
+      </span>
+      <span className="text-[11px] text-muted-foreground">{tag.family === "palmares" ? "Palmarès" : "Comportement"}</span>
+      <div className="ml-auto flex items-center gap-2">
+        <label className="text-xs text-muted-foreground">Bonus Elo</label>
+        <Input type="number" value={bonus} onChange={(e) => setBonus(e.target.value)} className="w-20 h-8" />
+        <Button size="sm" variant="outline" disabled={save.isPending} onClick={() => save.mutate()}>
+          OK
+        </Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={onDelete} title="Supprimer">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </Card>
   );
 }
 
