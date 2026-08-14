@@ -115,7 +115,13 @@ export const eloEngine = {
       const note = fixedK ? `Recalcul Elo (K=${fixedK})` : "Recalcul Elo (K adaptatif)";
       const [batch] = await tx.insert(changelogBatches).values({ note, authorUserId: opts.authorUserId ?? null }).returning();
       for (const p of allPlayers) {
-        const newElo = Math.round(cur.get(p.id) ?? BASE);
+        // Régression vers l'Elo de départ (rang) pondérée par le nombre de matchs :
+        // Elo = Départ + (Calculé − Départ) × matchs / (matchs + priorGames).
+        const raw = cur.get(p.id) ?? BASE;
+        const seed = p.seedElo ?? BASE;
+        const g = games.get(p.id) ?? 0;
+        const shrunk = P.priorGames > 0 ? seed + (raw - seed) * (g / (g + P.priorGames)) : raw;
+        const newElo = Math.round(shrunk);
         const oldElo = prev.get(p.id) ?? BASE;
         const newTierId = tierForElo(newElo, allTiers)?.id ?? null;
         const played = compsByPlayer.get(p.id)?.size ?? 0;

@@ -20,7 +20,7 @@ export function registerEloRoutes(app: Express) {
     try {
       const b = req.body ?? {};
       const patch: Partial<EloParams> = {};
-      for (const k of ["base", "provisionalGames", "kProvisional", "kBase", "kStableElo", "kStable"] as (keyof EloParams)[]) {
+      for (const k of ["base", "provisionalGames", "kProvisional", "kBase", "kStableElo", "kStable", "priorGames"] as (keyof EloParams)[]) {
         if (b[k] !== undefined && b[k] !== "" && !Number.isNaN(Number(b[k]))) patch[k] = Number(b[k]);
       }
       res.json(await eloParamsStore.set(patch));

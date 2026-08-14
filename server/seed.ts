@@ -139,10 +139,10 @@ const DEFAULT_HYDRA_SECTIONS = [
       "**3. Variation de chaque joueur** : nouvel Elo = ancien Elo + K × (Résultat − Attendu), où Résultat (1, 0 ou 0,5) et Attendu sont ceux de son équipe. Battre un favori (Attendu faible) rapporte gros ; perdre contre un outsider coûte cher. Tous les joueurs du roster reçoivent la variation de l'équipe (chacun pondéré par son propre K).\n\n" +
       "## Le facteur K (l'ampleur des variations)\n" +
       "K est **adaptatif**, calculé par joueur :\n" +
-      "- **Provisoire** — tant qu'un joueur a joué moins de **10 matchs** : K = **40** (calibrage rapide, pour trouver vite son niveau).\n" +
-      "- **Standard** — ensuite : K = **24**.\n" +
-      "- **Confirmé** — au-dessus de **1900** d'Elo : K = **16** (variations adoucies, pour stabiliser le haut du classement).\n\n" +
-      "Ces valeurs (10 matchs, 40/24/16, seuil 1900) sont **réglables par les admins**, qui peuvent aussi forcer un K unique lors d'un recalcul.\n\n" +
+      "- **Provisoire** — tant qu'un joueur a joué moins de **10 matchs** : K = **60** (calibrage rapide, pour trouver vite son niveau).\n" +
+      "- **Standard** — ensuite : K = **40**.\n" +
+      "- **Confirmé** — au-dessus de **1900** d'Elo : K = **28** (variations adoucies, pour stabiliser le haut du classement).\n\n" +
+      "Ces valeurs (10 matchs, 60/40/28, seuil 1900) sont **réglables par les admins**, qui peuvent aussi forcer un K unique lors d'un recalcul.\n\n" +
       "## L'Elo de départ (évaluation préliminaire)\n" +
       "Avant tout match, chaque joueur reçoit un Elo de base déterminé surtout par son **rang Ranked** (poids très fort), avec un **petit bonus de trophées** (+1 Elo par 2000 trophées, plafonné à +50 — jamais assez pour dépasser un rang supérieur).\n\n" +
       "| Rang Ranked | Elo de base |\n" +

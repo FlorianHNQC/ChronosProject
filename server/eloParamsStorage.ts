@@ -13,15 +13,17 @@ export type EloParams = {
   kBase: number; // K standard
   kStableElo: number; // Elo au-delà duquel on stabilise
   kStable: number; // K des joueurs confirmés (haut de classement)
+  priorGames: number; // « confiance du rang » : régression vers l'Elo de départ (0 = aucune)
 };
 
 export const DEFAULT_ELO_PARAMS: EloParams = {
   base: 1000,
   provisionalGames: 10,
-  kProvisional: 40,
-  kBase: 24,
+  kProvisional: 60, // calibrage rapide (relevé pour que les matchs pèsent plus)
+  kBase: 40,
   kStableElo: 1900,
-  kStable: 16,
+  kStable: 28,
+  priorGames: 10, // ancrage au rang tant que l'échantillon de matchs est faible
 };
 
 const KEYS = Object.keys(DEFAULT_ELO_PARAMS) as (keyof EloParams)[];

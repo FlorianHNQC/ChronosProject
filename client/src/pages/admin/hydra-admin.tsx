@@ -95,7 +95,7 @@ function RecomputeCard({ comps, onDone }: { comps: Competition[]; onDone: () => 
   );
 }
 
-type EloParams = { base: number; provisionalGames: number; kProvisional: number; kBase: number; kStableElo: number; kStable: number };
+type EloParams = { base: number; provisionalGames: number; kProvisional: number; kBase: number; kStableElo: number; kStable: number; priorGames: number };
 const PARAM_FIELDS: { key: keyof EloParams; label: string; hint: string }[] = [
   { key: "base", label: "Elo de départ (défaut)", hint: "Base d'un joueur non évalué" },
   { key: "provisionalGames", label: "Matchs provisoires", hint: "Avant fin du calibrage" },
@@ -103,6 +103,7 @@ const PARAM_FIELDS: { key: keyof EloParams; label: string; hint: string }[] = [
   { key: "kBase", label: "K standard", hint: "Régime normal" },
   { key: "kStableElo", label: "Seuil « confirmé »", hint: "Elo où l'on stabilise" },
   { key: "kStable", label: "K confirmé", hint: "Haut de classement" },
+  { key: "priorGames", label: "Confiance du rang", hint: "Ancrage vers l'Elo de départ (0 = aucun)" },
 ];
 
 function EloParamsCard() {
