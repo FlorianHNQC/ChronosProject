@@ -170,6 +170,9 @@ function InfosPanel({ comp, onSaved }: { comp: Competition; onSaved: () => void 
   const [noRookies, setNoRookies] = useState(!!comp.noRookies);
   const [minElo, setMinElo] = useState(comp.minElo != null ? String(comp.minElo) : "");
   const [avgEloCap, setAvgEloCap] = useState(comp.avgEloCap != null ? String(comp.avgEloCap) : "");
+  const [pointsWin, setPointsWin] = useState(String(comp.pointsWin ?? 3));
+  const [pointsDraw, setPointsDraw] = useState(String(comp.pointsDraw ?? 1));
+  const [pointsLoss, setPointsLoss] = useState(String(comp.pointsLoss ?? 0));
 
   const save = useMutation({
     mutationFn: () => apiRequest("PATCH", `/api/competitions/${comp.id}`, {
@@ -183,6 +186,9 @@ function InfosPanel({ comp, onSaved }: { comp: Competition; onSaved: () => void 
       noRookies,
       minElo: minElo || null,
       avgEloCap: avgEloCap || null,
+      pointsWin: Number(pointsWin) || 0,
+      pointsDraw: Number(pointsDraw) || 0,
+      pointsLoss: Number(pointsLoss) || 0,
     }),
     onSuccess: () => { onSaved(); toast({ title: "Enregistré" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
@@ -234,6 +240,17 @@ function InfosPanel({ comp, onSaved }: { comp: Competition; onSaved: () => void 
             </button>
           ))}
         </div>
+      </div>
+
+      <h2 className="font-semibold mb-2">Répartition des points</h2>
+      <p className="text-xs text-muted-foreground mb-2">Points attribués au classement selon l'issue d'un match.</p>
+      <div className="flex flex-wrap gap-3 mb-6">
+        <label className="text-sm"><span className="text-muted-foreground">Victoire</span>
+          <Input type="number" value={pointsWin} onChange={(e) => setPointsWin(e.target.value)} className="mt-1 w-24 h-9" /></label>
+        <label className="text-sm"><span className="text-muted-foreground">Nul</span>
+          <Input type="number" value={pointsDraw} onChange={(e) => setPointsDraw(e.target.value)} className="mt-1 w-24 h-9" /></label>
+        <label className="text-sm"><span className="text-muted-foreground">Défaite</span>
+          <Input type="number" value={pointsLoss} onChange={(e) => setPointsLoss(e.target.value)} className="mt-1 w-24 h-9" /></label>
       </div>
 
       <Button disabled={save.isPending || !name.trim()} onClick={() => save.mutate()}>

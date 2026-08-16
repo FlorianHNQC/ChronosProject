@@ -101,6 +101,10 @@ export const competitions = pgTable("competitions", {
   avgEloCap: integer("avg_elo_cap"), // moyenne d'Elo max par équipe (null = aucune)
   minElo: integer("min_elo"), // Elo minimum pour participer (null = aucun)
   noRookies: boolean("no_rookies").default(false),
+  // Barème de points au classement (répartition définie par l'admin).
+  pointsWin: integer("points_win").default(3),
+  pointsDraw: integer("points_draw").default(1),
+  pointsLoss: integer("points_loss").default(0),
 });
 
 // Phases d'une compétition : ordre + type de format + config (JSON libre).
@@ -275,6 +279,10 @@ export const matches = pgTable("matches", {
   hasTime: boolean("has_time").default(false),
   gameMode: text("game_mode"),
   map: text("map"),
+  // Format de la rencontre : nombre d'affrontements (parties de la série) et
+  // nombre de manches par affrontement.
+  numGames: integer("num_games").default(3),
+  roundsPerGame: integer("rounds_per_game").default(3),
   // Durée en secondes — nécessaire à la normalisation des dégâts (notation).
   durationSeconds: integer("duration_seconds").default(150),
   moderator: text("moderator"),

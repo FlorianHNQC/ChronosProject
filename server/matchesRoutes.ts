@@ -35,13 +35,17 @@ export function registerMatchesRoutes(app: Express) {
 
   app.post("/api/matches", async (req, res, next) => {
     try {
-      const { competitionId, teamHomeId, teamAwayId, matchType, datetime, gameMode, map } = req.body ?? {};
+      const { competitionId, teamHomeId, teamAwayId, matchType, datetime, gameMode, map, numGames, roundsPerGame, modifier } = req.body ?? {};
       if (!teamHomeId || !teamAwayId) {
-        return res.status(400).json({ message: "Équipes domicile et extérieur requises." });
+        return res.status(400).json({ message: "Les deux équipes sont requises." });
       }
       if (teamHomeId === teamAwayId) {
         return res.status(400).json({ message: "Une équipe ne peut pas s'affronter elle-même." });
       }
+      const posInt = (v: unknown, d: number) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n > 0 ? Math.floor(n) : d;
+      };
       const m = await matchesStore.create({
         competitionId: competitionId || undefined,
         teamHomeId,
@@ -51,6 +55,9 @@ export function registerMatchesRoutes(app: Express) {
         hasTime: !!datetime,
         gameMode: gameMode || undefined,
         map: map || undefined,
+        numGames: posInt(numGames, 3),
+        roundsPerGame: posInt(roundsPerGame, 3),
+        modifier: modifier || undefined,
         status: "upcoming",
       });
       res.status(201).json(m);
@@ -63,7 +70,7 @@ export function registerMatchesRoutes(app: Express) {
     try {
       const b = req.body ?? {};
       const patch: Record<string, unknown> = {};
-      for (const k of ["scoreHome", "scoreAway", "winnerId", "status", "gameMode", "map", "matchType"]) {
+      for (const k of ["scoreHome", "scoreAway", "winnerId", "status", "gameMode", "map", "matchType", "numGames", "roundsPerGame", "modifier"]) {
         if (b[k] !== undefined) patch[k] = b[k];
       }
       if (b.datetime !== undefined) {

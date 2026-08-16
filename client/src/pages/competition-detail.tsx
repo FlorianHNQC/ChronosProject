@@ -107,7 +107,7 @@ export function CompetitionDetailPage() {
           </div>
 
           {active === "saison" && (
-            <SeasonPhase matches={matches ?? []} teams={teams ?? []} conferences={conferences ?? []} />
+            <SeasonPhase matches={matches ?? []} teams={teams ?? []} conferences={conferences ?? []} comp={comp} />
           )}
           {active === "playoffs" && <PlayoffPhase series={series ?? []} teamName={teamNameById} />}
           {active === "aleatoire" && id && <RandomPhase competitionId={id} />}
@@ -118,7 +118,7 @@ export function CompetitionDetailPage() {
 }
 
 /** Phase de saison : classement (par défaut) ou calendrier. */
-function SeasonPhase({ matches, teams, conferences }: { matches: Match[]; teams: Team[]; conferences: Conference[] }) {
+function SeasonPhase({ matches, teams, conferences, comp }: { matches: Match[]; teams: Team[]; conferences: Conference[]; comp?: Competition }) {
   const [view, setView] = useState<"classement" | "calendrier">("classement");
   return (
     <div>
@@ -133,7 +133,14 @@ function SeasonPhase({ matches, teams, conferences }: { matches: Match[]; teams:
         </div>
       </div>
       {view === "classement" ? (
-        <CompetitionStandings teams={teams} matches={matches} conferences={conferences} />
+        <CompetitionStandings
+          teams={teams}
+          matches={matches}
+          conferences={conferences}
+          pointsWin={comp?.pointsWin ?? 3}
+          pointsDraw={comp?.pointsDraw ?? 1}
+          pointsLoss={comp?.pointsLoss ?? 0}
+        />
       ) : (
         <MatchCalendar matches={matches} teams={teams} />
       )}

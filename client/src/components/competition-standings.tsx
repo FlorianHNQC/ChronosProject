@@ -12,10 +12,16 @@ export function CompetitionStandings({
   teams,
   matches,
   conferences,
+  pointsWin = 3,
+  pointsDraw = 1,
+  pointsLoss = 0,
 }: {
   teams: Team[];
   matches: Match[];
   conferences: Conference[];
+  pointsWin?: number;
+  pointsDraw?: number;
+  pointsLoss?: number;
 }) {
   const rows = useMemo(() => {
     const ids = new Set(teams.map((t) => t.id));
@@ -30,15 +36,18 @@ export function CompetitionStandings({
       const sh = m.scoreHome ?? 0;
       const sa = m.scoreAway ?? 0;
       h.j++; a.j++; h.bp += sh; h.bc += sa; a.bp += sa; a.bc += sh;
+      const win = (r: Row) => { r.v++; r.pts += pointsWin; };
+      const lose = (r: Row) => { r.d++; r.pts += pointsLoss; };
+      const draw = (r: Row) => { r.n++; r.pts += pointsDraw; };
       // Le vainqueur est stocké dans winnerId (les scores ne sont pas toujours renseignés).
-      if (m.winnerId === m.teamHomeId) { h.v++; h.pts += 3; a.d++; }
-      else if (m.winnerId === m.teamAwayId) { a.v++; a.pts += 3; h.d++; }
-      else if (sh > sa) { h.v++; h.pts += 3; a.d++; }
-      else if (sh < sa) { a.v++; a.pts += 3; h.d++; }
-      else { h.n++; a.n++; h.pts++; a.pts++; }
+      if (m.winnerId === m.teamHomeId) { win(h); lose(a); }
+      else if (m.winnerId === m.teamAwayId) { win(a); lose(h); }
+      else if (sh > sa) { win(h); lose(a); }
+      else if (sh < sa) { win(a); lose(h); }
+      else { draw(h); draw(a); }
     }
     return rec;
-  }, [teams, matches]);
+  }, [teams, matches, pointsWin, pointsDraw, pointsLoss]);
 
   const sortRows = (list: Row[]) =>
     [...list].sort(
@@ -117,7 +126,7 @@ export function CompetitionStandings({
           </div>
         </div>
       ))}
-      <p className="text-[11px] text-muted-foreground">Victoire = 3 pts · Nul = 1 pt · Défaite = 0.</p>
+      <p className="text-[11px] text-muted-foreground">Victoire = {pointsWin} pt{pointsWin > 1 ? "s" : ""} · Nul = {pointsDraw} pt{pointsDraw > 1 ? "s" : ""} · Défaite = {pointsLoss} pt{pointsLoss > 1 ? "s" : ""}.</p>
     </div>
   );
 }
