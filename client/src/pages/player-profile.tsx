@@ -15,10 +15,13 @@ type PlayerMatch = {
   matchId: string; datetime: string | null; gameMode: string | null;
   teamId: string; winnerId: string | null;
   kills: number; deaths: number; damage: number; victory: boolean;
-  noteFinale: number; notePerf: number; impact: number;
+  noteFinale: number; notePerf: number; impact: number; eloDelta: number | null;
 };
 type PlayerTeam = { teamId: string; name: string; tag: string; competitionId: string | null; isCaptain: boolean | null };
-type PlayerTagRow = { playerId: string; tagId: string; label: string; color: string | null };
+type PlayerTagRow = {
+  playerId: string; tagId: string; label: string; color: string | null;
+  family?: "palmares" | "comportement"; awardedAt?: string | null;
+};
 
 export function PlayerProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +43,19 @@ export function PlayerProfilePage() {
 
   const tags = (allTags ?? []).filter((t) => t.playerId === id);
   const tier = tierForElo(player?.elo ?? null, tiers ?? []);
+
+  // Palmarès groupé par année (les tags se réinitialisent chaque saison annuelle).
+  const palmaresByYear = useMemo(() => {
+    const palmares = tags.filter((t) => t.family !== "comportement");
+    const groups = new Map<string, PlayerTagRow[]>();
+    for (const t of palmares) {
+      const y = t.awardedAt ? String(new Date(t.awardedAt).getFullYear()) : "—";
+      if (!groups.has(y)) groups.set(y, []);
+      groups.get(y)!.push(t);
+    }
+    return Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [tags]);
+  const behaviorTags = tags.filter((t) => t.family === "comportement");
 
   const { isAdmin } = useMe();
   const { toast } = useToast();
@@ -109,12 +125,30 @@ export function PlayerProfilePage() {
             )}
             <span className="text-sm text-muted-foreground">Elo {player?.elo ?? "—"}</span>
             {player?.playerTag && <span className="text-xs text-muted-foreground">{player.playerTag}</span>}
-            {tags.map((t) => (
+            {behaviorTags.map((t) => (
               <span key={t.tagId} className="text-[11px] font-medium" style={{ color: t.color ?? undefined }}>{t.label}</span>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Palmarès — groupé par année (réinitialisation annuelle) */}
+      {palmaresByYear.length > 0 && (
+        <div className="mb-6 space-y-1.5">
+          {palmaresByYear.map(([year, list]) => (
+            <div key={year} className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-muted-foreground w-12 shrink-0 tabular-nums">{year}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {list.map((t) => (
+                  <span key={t.tagId} className="text-[11px] font-medium px-2 py-0.5 rounded text-white" style={{ backgroundColor: t.color ?? "#666" }}>
+                    {t.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Admin : associer un compte Brawl Stars (préserve l'historique, met à jour l'avatar) */}
       {id && <LinkAccount playerId={id} linked={player?.playerTag ?? null} />}
@@ -162,6 +196,7 @@ export function PlayerProfilePage() {
                 <th className="text-left py-1.5">Date</th>
                 <th className="text-left px-2">Mode</th>
                 <th className="px-2">Rés.</th>
+                <th className="px-2">Elo</th>
                 <th className="px-2">K</th><th className="px-2">D</th>
                 <th className="px-2">Dég.</th><th className="px-2">Note</th>
                 <th></th>
@@ -173,6 +208,7 @@ export function PlayerProfilePage() {
                   <td className="text-left py-1.5">{m.datetime ? new Date(m.datetime).toLocaleDateString("fr-FR") : "—"}</td>
                   <td className="text-left px-2">{m.gameMode ?? "—"}</td>
                   <td className={"px-2 font-medium " + (m.victory ? "text-green-500" : "text-red-500")}>{m.victory ? "V" : "D"}</td>
+                  <td className="px-2 font-semibold tabular-nums"><EloDelta delta={m.eloDelta} /></td>
                   <td className="px-2">{m.kills}</td>
                   <td className="px-2">{m.deaths}</td>
                   <td className="px-2">{m.damage.toLocaleString("fr-FR")}</td>
@@ -185,6 +221,17 @@ export function PlayerProfilePage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Variation d'Elo d'un match : +X vert, -X rouge, 0 discret (match non compétitif). */
+function EloDelta({ delta }: { delta: number | null }) {
+  if (delta == null || delta === 0) return <span className="text-muted-foreground" title="Match hors classement Elo">0</span>;
+  const pos = delta > 0;
+  return (
+    <span className={pos ? "text-green-500" : "text-red-500"}>
+      {pos ? "+" : ""}{delta}
+    </span>
   );
 }
 

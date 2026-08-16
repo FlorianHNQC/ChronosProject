@@ -17,6 +17,7 @@ export type PlayerTagRow = {
   label: string;
   family: "palmares" | "comportement";
   color: string | null;
+  awardedAt: Date | null;
 };
 
 export const hydraAdmin = {
@@ -56,6 +57,7 @@ export const hydraAdmin = {
         label: tags.label,
         family: tags.family,
         color: tags.color,
+        awardedAt: playerTags.awardedAt,
       })
       .from(playerTags)
       .innerJoin(tags, eq(playerTags.tagId, tags.id));

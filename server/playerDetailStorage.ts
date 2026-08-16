@@ -21,6 +21,7 @@ export type PlayerMatchRow = {
   noteFinale: number;
   notePerf: number;
   impact: number;
+  eloDelta: number | null;
 };
 
 export type PlayerTeamRow = {
@@ -50,6 +51,7 @@ export const playerDetail = {
         noteFinale: matchPlayerStats.noteFinale,
         notePerf: matchPlayerStats.notePerf,
         impact: matchPlayerStats.impact,
+        eloDelta: matchPlayerStats.eloDelta,
       })
       .from(matchPlayerStats)
       .innerJoin(matches, eq(matchPlayerStats.matchId, matches.id))

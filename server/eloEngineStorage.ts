@@ -15,8 +15,9 @@
  */
 import { asc, eq } from "drizzle-orm";
 import { db } from "./db";
+import { sql } from "drizzle-orm";
 import {
-  matches, teamPlayers, teams, competitions, players, tiers, tags, playerTags, changelogBatches, eloChangelog,
+  matches, matchPlayerStats, teamPlayers, teams, competitions, players, tiers, tags, playerTags, changelogBatches, eloChangelog,
 } from "@shared/schema";
 import { tierForElo } from "@shared/tiers";
 import { eloParamsStore } from "./eloParamsStorage";
@@ -88,6 +89,9 @@ export const eloEngine = {
       return P.kBase;
     };
 
+    // Delta d'Elo par (match, joueur) — pour l'historique du profil.
+    const matchDeltas: { matchId: string; playerId: string; delta: number }[] = [];
+
     let processed = 0;
     for (const m of ms) {
       if (m.status !== "completed") continue;
@@ -112,12 +116,16 @@ export const eloEngine = {
       else { sH = 0.5; sA = 0.5; } // nul / vainqueur non renseigné
 
       for (const p of homeP) {
-        cur.set(p, (cur.get(p) ?? BASE) + kFor(p) * (sH - expH));
+        const d = kFor(p) * (sH - expH);
+        cur.set(p, (cur.get(p) ?? BASE) + d);
         games.set(p, (games.get(p) ?? 0) + 1);
+        matchDeltas.push({ matchId: m.id, playerId: p, delta: Math.round(d) });
       }
       for (const p of awayP) {
-        cur.set(p, (cur.get(p) ?? BASE) + kFor(p) * (sA - expA));
+        const d = kFor(p) * (sA - expA);
+        cur.set(p, (cur.get(p) ?? BASE) + d);
         games.set(p, (games.get(p) ?? 0) + 1);
+        matchDeltas.push({ matchId: m.id, playerId: p, delta: Math.round(d) });
       }
       processed++;
     }
@@ -145,6 +153,19 @@ export const eloEngine = {
         if (newElo !== oldElo) {
           await tx.insert(eloChangelog).values({ batchId: batch.id, playerId: p.id, oldElo, newElo, newTierId, comment: null });
         }
+      }
+
+      // Delta d'Elo par match : on repart de zéro (les matchs non comptabilisés
+      // restent à null → « 0 » côté profil) puis on applique les deltas calculés.
+      const scope = opts.competitionId
+        ? sql`match_id IN (SELECT id FROM matches WHERE competition_id = ${opts.competitionId})`
+        : sql`TRUE`;
+      await tx.update(matchPlayerStats).set({ eloDelta: null }).where(scope);
+      for (const d of matchDeltas) {
+        await tx
+          .update(matchPlayerStats)
+          .set({ eloDelta: d.delta })
+          .where(sql`match_id = ${d.matchId} AND player_id = ${d.playerId}`);
       }
     });
 

@@ -350,6 +350,9 @@ export const matchPlayerStats = pgTable("match_player_stats", {
   notePerf: real("note_perf").notNull().default(0),
   impact: real("impact").notNull().default(0),
   noteFinale: real("note_finale").notNull().default(0),
+  // Variation d'Elo du joueur sur ce match (renseignée au recalcul ; null/0 si le
+  // match ne compte pas pour l'Elo).
+  eloDelta: integer("elo_delta"),
 });
 
 // Paramètres de notation configurables (coefficients, valeurs de référence).

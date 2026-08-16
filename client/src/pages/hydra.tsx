@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
@@ -14,8 +15,16 @@ import type { Player, Tier, HydraSection } from "@shared/schema";
 
 type PlayerTagRow = {
   playerId: string; tagId: string; code: string; label: string;
-  family: "palmares" | "comportement"; color: string | null;
+  family: "palmares" | "comportement"; color: string | null; awardedAt: string | null;
 };
+
+// Les tags palmarès se réinitialisent chaque année : sur la tier list on n'affiche
+// que ceux de l'année en cours (les tags sans date, hérités, restent visibles).
+const CURRENT_YEAR = new Date().getFullYear();
+function isCurrentYear(t: PlayerTagRow): boolean {
+  if (!t.awardedAt) return true;
+  return new Date(t.awardedAt).getFullYear() === CURRENT_YEAR;
+}
 
 type Mode = "joueurs" | "rookie" | "reserve";
 const DAY = 86400000;
@@ -218,24 +227,29 @@ export function HydraPage() {
 }
 
 function PlayerCard({ player, tags }: { player: Player; tags: PlayerTagRow[] }) {
+  const shown = tags.filter(isCurrentYear);
   return (
-    <div className="w-[84px] flex flex-col items-center text-center" title={`Elo ${player.elo ?? "—"}`}>
+    <Link
+      href={`/joueurs/${player.id}`}
+      className="w-[84px] flex flex-col items-center text-center group focus:outline-none"
+      title={`Voir le profil · Elo ${player.elo ?? "—"}`}
+    >
       {player.avatarUrl ? (
-        <img src={player.avatarUrl} alt={player.pseudo} className="h-[76px] w-[76px] rounded-lg object-cover bg-muted ring-1 ring-border" loading="lazy" />
+        <img src={player.avatarUrl} alt={player.pseudo} className="h-[76px] w-[76px] rounded-lg object-cover bg-muted ring-1 ring-border transition-all group-hover:ring-2 group-hover:ring-primary group-hover:brightness-110" loading="lazy" />
       ) : (
-        <div className="h-[76px] w-[76px] rounded-lg bg-muted flex items-center justify-center ring-1 ring-border">
+        <div className="h-[76px] w-[76px] rounded-lg bg-muted flex items-center justify-center ring-1 ring-border transition-all group-hover:ring-2 group-hover:ring-primary">
           <UserRound className="h-9 w-9 text-muted-foreground" />
         </div>
       )}
-      <span className="mt-1 text-xs font-semibold leading-tight break-words w-full">{player.pseudo}</span>
-      {tags.length > 0 && (
+      <span className="mt-1 text-xs font-semibold leading-tight break-words w-full group-hover:text-primary">{player.pseudo}</span>
+      {shown.length > 0 && (
         <div className="mt-0.5 flex flex-wrap justify-center gap-x-1.5 leading-tight">
-          {tags.map((t) => (
+          {shown.map((t) => (
             <span key={t.tagId} className="text-[11px] font-medium" style={{ color: t.color ?? undefined }} title={t.label}>{t.label}</span>
           ))}
         </div>
       )}
-    </div>
+    </Link>
   );
 }
 
