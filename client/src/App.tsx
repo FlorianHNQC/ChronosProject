@@ -22,7 +22,6 @@ import { MatchDetailPage } from "@/pages/match-detail";
 import { AwardsPage } from "@/pages/awards";
 import { StatsPage } from "@/pages/stats";
 import { LoginPage } from "@/pages/login";
-import { ComingSoonPage } from "@/pages/coming-soon";
 import { PlayersAdminPage } from "@/pages/admin/players-admin";
 import { HydraAdminPage } from "@/pages/admin/hydra-admin";
 import { CompetitionsAdminPage } from "@/pages/admin/competitions-admin";
@@ -138,31 +137,14 @@ function Shell() {
   );
 }
 
-/**
- * Verrou public : le visiteur voit « bientôt disponible » ; seul un admin
- * connecté accède au site. La route /login reste ouverte pour se connecter.
- */
-function Gate() {
-  const { data: me, isLoading } = useMe();
-  const [location] = useLocation();
-  if (isLoading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-      </div>
-    );
-  }
-  const isAdmin = !!me && me.role === "admin";
-  if (!isAdmin) return location === "/login" ? <LoginPage /> : <ComingSoonPage />;
-  return <Shell />;
-}
-
 export default function App() {
+  // Site ouvert au public : tout le monde accède au Shell. Les pages
+  // d'administration restent protégées par AdminGuard (redirection vers /login).
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Gate />
+          <Shell />
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>
