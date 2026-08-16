@@ -5,7 +5,7 @@ import {
   Accordion, AccordionItem, AccordionTrigger, AccordionContent,
 } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
-import { Search, UserRound, Wrench } from "lucide-react";
+import { Search, UserRound } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { tierForElo } from "@shared/tiers";
 import { useMe } from "@/hooks/use-me";
@@ -57,7 +57,7 @@ export function HydraPage() {
   const { data: tiers } = useQuery<Tier[]>({ queryKey: ["/api/tiers"] });
   const { data: players } = useQuery<Player[]>({ queryKey: ["/api/players"] });
   const { data: sections } = useQuery<HydraSection[]>({ queryKey: ["/api/hydra/sections"] });
-  const { isAdmin, isLoading: authLoading } = useMe();
+  const { isAdmin } = useMe();
   const { data: playerTags } = useQuery<PlayerTagRow[]>({ queryKey: ["/api/player-tags"] });
 
   const tagsByPlayer = useMemo(() => {
@@ -113,29 +113,6 @@ export function HydraPage() {
 
   const toggleTag = (id: string) =>
     setSelectedTags((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
-  // Page en maintenance : réservée aux administrateurs connectés.
-  if (authLoading) {
-    return <div className="w-full px-6 py-16 text-center text-sm text-muted-foreground">Chargement…</div>;
-  }
-  if (!isAdmin) {
-    return (
-      <div className="w-full px-6 py-16 flex justify-center">
-        <div className="max-w-md text-center border rounded-lg p-8">
-          <div className="flex justify-center mb-3">
-            <Wrench className="h-8 w-8 text-primary" />
-          </div>
-          <h1 className="text-xl font-bold mb-2">Hydra — en maintenance</h1>
-          <p className="text-sm text-muted-foreground mb-4">
-            Cette page est temporairement en maintenance. Elle n'est accessible qu'aux administrateurs connectés.
-          </p>
-          <a href="/login" className="inline-block text-sm font-medium text-primary underline underline-offset-2">
-            Connexion admin
-          </a>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full px-6 py-8">
