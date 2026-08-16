@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Star, X, UserRound } from "lucide-react";
+import { Plus, Trash2, Star, X, UserRound, Image as ImageIcon } from "lucide-react";
+import { uploadImage } from "@/lib/upload";
 import type { Competition, Player, Team } from "@shared/schema";
 
 type RosterMember = {
@@ -122,6 +123,14 @@ function TeamCard({ team, competitionId }: { team: Team; competitionId: string }
     mutationFn: () => apiRequest("DELETE", `/api/teams/${team.id}`),
     onSuccess: () => { invalidateTeams(); toast({ title: "Équipe supprimée" }); },
   });
+  const setLogo = useMutation({
+    mutationFn: async (file: File) => {
+      const url = await uploadImage(file, { max: 256, quality: 0.85 });
+      return apiRequest("PATCH", `/api/teams/${team.id}`, { logoUrl: url });
+    },
+    onSuccess: () => { invalidateTeams(); toast({ title: "Logo mis à jour" }); },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
 
   const inTeam = new Set((roster ?? []).map((r) => r.playerId));
   const available = (allPlayers ?? []).filter((p) => !inTeam.has(p.id));
@@ -129,8 +138,20 @@ function TeamCard({ team, competitionId }: { team: Team; competitionId: string }
   return (
     <Card className="p-3">
       <div className="flex items-center gap-2 mb-2">
+        <label className="shrink-0 cursor-pointer" title="Changer le logo (image optimisée automatiquement)">
+          {team.logoUrl ? (
+            <img src={team.logoUrl} alt={team.name} className="h-9 w-9 rounded object-cover bg-muted ring-1 ring-border" />
+          ) : (
+            <div className="h-9 w-9 rounded bg-muted flex items-center justify-center ring-1 ring-border">
+              <ImageIcon className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
+          <input type="file" accept="image/*" className="hidden" disabled={setLogo.isPending}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) setLogo.mutate(f); e.target.value = ""; }} />
+        </label>
         <span className="font-semibold">{team.name}</span>
         <span className="text-xs text-muted-foreground">[{team.tag}]</span>
+        {setLogo.isPending && <span className="text-xs text-muted-foreground">envoi…</span>}
         <Button size="icon" variant="ghost" className="ml-auto" title="Supprimer l'équipe" onClick={() => removeTeam.mutate()}>
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
