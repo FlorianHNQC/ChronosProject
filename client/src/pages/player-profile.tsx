@@ -157,10 +157,10 @@ export function PlayerProfilePage() {
       {(teams ?? []).length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
           {(teams ?? []).map((t) => (
-            <span key={t.teamId} className="inline-flex items-center gap-1 text-xs border rounded px-2 py-1">
+            <Link key={t.teamId} href={`/equipes/${t.teamId}`} className="inline-flex items-center gap-1 text-xs border rounded px-2 py-1 hover:border-primary hover:text-primary">
               {t.isCaptain && <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />}
               {t.name} <span className="text-muted-foreground">[{t.tag}]</span>
-            </span>
+            </Link>
           ))}
         </div>
       )}

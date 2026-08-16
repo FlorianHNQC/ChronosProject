@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "wouter";
 import type { Team, Match, Conference } from "@shared/schema";
 
 type Row = { team: Team; j: number; v: number; n: number; d: number; bp: number; bc: number; pts: number };
@@ -161,7 +162,9 @@ export function CompetitionStandings({
                 {g.rows.map((r, i) => (
                   <tr key={r.team.id} className="border-b last:border-0 hover:bg-muted/40">
                     <td className="py-2 pl-2 text-muted-foreground">{i + 1}</td>
-                    <td className="py-2 font-medium truncate">{r.team.name}</td>
+                    <td className="py-2 font-medium truncate">
+                      <Link href={`/equipes/${r.team.id}`} className="hover:text-primary hover:underline">{r.team.name}</Link>
+                    </td>
                     <td className="py-2 text-center tabular-nums">{r.j}</td>
                     <td className="py-2 text-center tabular-nums">{r.v}</td>
                     <td className="py-2 text-center tabular-nums">{r.n}</td>

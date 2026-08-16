@@ -8,7 +8,8 @@ import { MatchCalendar } from "@/components/match-calendar";
 import { CompetitionStandings, scoringFromCompetition } from "@/components/competition-standings";
 import { Bracket } from "@/components/bracket";
 import { RandomPhase } from "@/components/random-phase";
-import { ChevronLeft, CalendarDays, Trophy, GitBranch, List, ListOrdered, Shuffle } from "lucide-react";
+import { CompetitionAwards } from "@/components/competition-awards";
+import { ChevronLeft, CalendarDays, Trophy, GitBranch, List, ListOrdered, Shuffle, Award } from "lucide-react";
 import type { Competition, Team, Match, Conference, PlayoffSeries } from "@shared/schema";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -17,7 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 const STATUS_LABELS: Record<string, string> = { draft: "Brouillon", active: "Active", archived: "Archivée" };
 
-type Phase = "saison" | "playoffs" | "aleatoire";
+type Phase = "saison" | "playoffs" | "aleatoire" | "recompenses";
 type RandomRoundLite = { id: string };
 
 /** Détail d'une compétition : ses phases (saison, playoffs) déduites des données. */
@@ -56,14 +57,16 @@ export function CompetitionDetailPage() {
   // En format aléatoire, la "saison" par équipes fixes n'a pas de sens.
   const hasSeason = !hasRandom && ((matches ?? []).length > 0 || (teams ?? []).length > 0);
   const hasPlayoffs = (series ?? []).length > 0;
+  const isArchived = comp?.status === "archived";
 
   const phases = useMemo(() => {
     const list: { key: Phase; label: string; icon: typeof CalendarDays }[] = [];
     if (hasRandom) list.push({ key: "aleatoire", label: "Aléatoire", icon: Shuffle });
     if (hasSeason) list.push({ key: "saison", label: "Saison", icon: Trophy });
     if (hasPlayoffs) list.push({ key: "playoffs", label: "Playoffs", icon: GitBranch });
+    if (isArchived) list.push({ key: "recompenses", label: "Récompenses", icon: Award });
     return list;
-  }, [hasRandom, hasSeason, hasPlayoffs]);
+  }, [hasRandom, hasSeason, hasPlayoffs, isArchived]);
 
   const [phase, setPhase] = useState<Phase | null>(null);
   const active = phase ?? phases[0]?.key ?? null;
@@ -111,6 +114,7 @@ export function CompetitionDetailPage() {
           )}
           {active === "playoffs" && <PlayoffPhase series={series ?? []} teamName={teamNameById} />}
           {active === "aleatoire" && id && <RandomPhase competitionId={id} />}
+          {active === "recompenses" && id && <CompetitionAwards competitionId={id} />}
         </>
       )}
     </div>

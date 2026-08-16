@@ -16,6 +16,7 @@ import { HydraPage } from "@/pages/hydra";
 import { CompetitionsPage } from "@/pages/competitions";
 import { CompetitionDetailPage } from "@/pages/competition-detail";
 import { TeamsPage } from "@/pages/teams";
+import { TeamProfilePage } from "@/pages/team-profile";
 import { MatchesPage } from "@/pages/matches";
 import { MatchDetailPage } from "@/pages/match-detail";
 import { AwardsPage } from "@/pages/awards";
@@ -24,18 +25,12 @@ import { LoginPage } from "@/pages/login";
 import { ComingSoonPage } from "@/pages/coming-soon";
 import { PlayersAdminPage } from "@/pages/admin/players-admin";
 import { HydraAdminPage } from "@/pages/admin/hydra-admin";
-import { TiersAdminPage } from "@/pages/admin/tiers-admin";
-import { TagsAdminPage } from "@/pages/admin/tags-admin";
 import { CompetitionsAdminPage } from "@/pages/admin/competitions-admin";
 import { CompetitionManagePage } from "@/pages/admin/competition-manage";
-import { AwardsAdminPage } from "@/pages/admin/awards-admin";
-import { RandomAdminPage } from "@/pages/admin/random-admin";
 import { TournamentBuilderPage } from "@/pages/admin/tournament-builder";
 import { TeamsAdminPage } from "@/pages/admin/teams-admin";
 import { MatchesAdminPage } from "@/pages/admin/matches-admin";
 import { FusionAdminPage } from "@/pages/admin/fusion-admin";
-import { ValidationAdminPage } from "@/pages/admin/validation-admin";
-import { DriftersAdminPage } from "@/pages/admin/drifters-admin";
 import NotFound from "@/pages/not-found";
 
 type Me = { id: string; email: string; role: string } | null;
@@ -121,24 +116,19 @@ function Shell() {
             <Route path="/matchs/:id" component={MatchDetailPage} />
             <Route path="/hydra" component={HydraPage} />
             <Route path="/equipes" component={TeamsPage} />
+            <Route path="/equipes/:id" component={TeamProfilePage} />
             <Route path="/joueurs" component={PlayersPage} />
             <Route path="/joueurs/:id" component={PlayerProfilePage} />
             <Route path="/stats" component={StatsPage} />
             <Route path="/recompenses" component={AwardsPage} />
             <Route path="/admin/joueurs" component={guarded(PlayersAdminPage)} />
             <Route path="/admin/hydra" component={guarded(HydraAdminPage)} />
-            <Route path="/admin/tiers" component={guarded(TiersAdminPage)} />
-            <Route path="/admin/tags" component={guarded(TagsAdminPage)} />
             <Route path="/admin/competitions" component={guarded(CompetitionsAdminPage)} />
             <Route path="/admin/competitions/:id" component={guarded(CompetitionManagePage)} />
-            <Route path="/admin/recompenses" component={guarded(AwardsAdminPage)} />
             <Route path="/admin/tournoi" component={guarded(TournamentBuilderPage)} />
-            <Route path="/admin/aleatoire" component={guarded(RandomAdminPage)} />
             <Route path="/admin/equipes" component={guarded(TeamsAdminPage)} />
             <Route path="/admin/matchs" component={guarded(MatchesAdminPage)} />
             <Route path="/admin/fusion" component={guarded(FusionAdminPage)} />
-            <Route path="/admin/validation" component={guarded(ValidationAdminPage)} />
-            <Route path="/admin/drifters" component={guarded(DriftersAdminPage)} />
             <Route path="/admin" component={guarded(() => <Placeholder title="Console d'administration" note="Choisissez une rubrique." />)} />
             <Route component={NotFound} />
           </Switch>

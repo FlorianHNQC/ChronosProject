@@ -9,11 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ChevronLeft, Info, LayoutList, Users, CalendarDays, Shuffle,
   Play, Archive, Copy, Trash2, Plus, X, ArrowUp, ArrowDown,
-  ArrowLeftRight, LayoutGrid, GitBranch, Trophy,
+  ArrowLeftRight, LayoutGrid, GitBranch, Trophy, ShieldCheck, Repeat, Award,
 } from "lucide-react";
 import { CompetitionTeamsPanel } from "@/components/admin/competition-teams-panel";
 import { CompetitionMatchesPanel } from "@/components/admin/competition-matches-panel";
 import { RandomTournamentPanel } from "@/components/admin/random-tournament-panel";
+import { CompositionRulesPanel } from "@/components/admin/composition-rules-panel";
+import { DriftersPanel } from "@/components/admin/drifters-panel";
+import { AwardsAdminPanel } from "@/components/admin/awards-admin-panel";
 import type { Competition, CompetitionPhase } from "@shared/schema";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
@@ -33,7 +36,7 @@ const FORMATS: { key: FmtKey; label: string; icon: typeof CalendarDays; desc: st
 ];
 const fmt = (k: string) => FORMATS.find((f) => f.key === k);
 
-type TabKey = "infos" | "phases" | "equipes" | "matchs" | "aleatoire";
+type TabKey = "infos" | "phases" | "equipes" | "matchs" | "aleatoire" | "regles" | "drifters" | "recompenses";
 
 function toDateInput(v: string | Date | null | undefined): string {
   if (!v) return "";
@@ -73,9 +76,14 @@ export function CompetitionManagePage() {
     [comp, phases],
   );
 
+  const isArchived = comp?.status === "archived";
+
   const [tab, setTab] = useState<TabKey>("infos");
-  // Si le format n'est plus aléatoire, ne pas rester coincé sur cet onglet.
-  useEffect(() => { if (tab === "aleatoire" && !isRandom) setTab("infos"); }, [tab, isRandom]);
+  // Ne pas rester coincé sur un onglet devenu invisible.
+  useEffect(() => {
+    if (tab === "aleatoire" && !isRandom) setTab("infos");
+    if (tab === "recompenses" && !isArchived) setTab("infos");
+  }, [tab, isRandom, isArchived]);
 
   const activate = useMutation({
     mutationFn: () => apiRequest("PATCH", `/api/competitions/${id}`, { status: "active" }),
@@ -101,6 +109,9 @@ export function CompetitionManagePage() {
     { key: "equipes", label: "Équipes", icon: Users },
     { key: "matchs", label: "Matchs", icon: CalendarDays },
     ...(isRandom ? [{ key: "aleatoire" as TabKey, label: "Aléatoire", icon: Shuffle }] : []),
+    { key: "regles", label: "Règles compo", icon: ShieldCheck },
+    { key: "drifters", label: "Drifters", icon: Repeat },
+    ...(isArchived ? [{ key: "recompenses" as TabKey, label: "Récompenses", icon: Award }] : []),
   ];
 
   const status = comp?.status ?? "draft";
@@ -154,6 +165,9 @@ export function CompetitionManagePage() {
       {tab === "equipes" && <CompetitionTeamsPanel competitionId={id} />}
       {tab === "matchs" && <CompetitionMatchesPanel competitionId={id} />}
       {tab === "aleatoire" && isRandom && <RandomTournamentPanel competitionId={id} />}
+      {tab === "regles" && <CompositionRulesPanel competitionId={id} />}
+      {tab === "drifters" && <DriftersPanel competitionId={id} />}
+      {tab === "recompenses" && isArchived && <AwardsAdminPanel competitionId={id} />}
     </div>
   );
 }

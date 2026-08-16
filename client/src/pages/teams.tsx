@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
@@ -67,11 +68,11 @@ function PublicTeamCard({ team }: { team: Team }) {
 
   return (
     <Card className="p-4">
-      <div className="flex items-center gap-2 mb-3">
+      <Link href={`/equipes/${team.id}`} className="flex items-center gap-2 mb-3 group w-fit">
         {team.logoUrl && <img src={team.logoUrl} alt={team.name} className="h-7 w-7 rounded object-cover" />}
-        <span className="font-semibold">{team.name}</span>
+        <span className="font-semibold group-hover:text-primary">{team.name}</span>
         <span className="text-xs text-muted-foreground">[{team.tag}]</span>
-      </div>
+      </Link>
       <div className="flex flex-wrap gap-3">
         {(roster ?? []).map((m) => (
           <div key={m.playerId} className="w-[68px] flex flex-col items-center text-center">
