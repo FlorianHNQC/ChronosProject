@@ -59,6 +59,7 @@ const NAV: NavGroup[] = [
       { label: "Compétitions (admin)", href: "/admin/competitions", icon: Trophy },
       { label: "Récompenses (admin)", href: "/admin/recompenses", icon: Award },
       { label: "Créer un tournoi", href: "/admin/tournoi", icon: Trophy },
+      { label: "Tournoi aléatoire", href: "/admin/aleatoire", icon: Shuffle },
       { label: "Équipes (admin)", href: "/admin/equipes", icon: Users },
       { label: "Matchs (admin)", href: "/admin/matchs", icon: CalendarDays },
       { label: "Joueurs (admin)", href: "/admin/joueurs", icon: UserCog },
