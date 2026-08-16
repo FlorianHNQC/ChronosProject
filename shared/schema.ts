@@ -102,9 +102,16 @@ export const competitions = pgTable("competitions", {
   minElo: integer("min_elo"), // Elo minimum pour participer (null = aucun)
   noRookies: boolean("no_rookies").default(false),
   // Barème de points au classement (répartition définie par l'admin).
+  // scoringMode : "simple" (V/N/D) | "advanced" (au score) | "manual" (saisi par rencontre).
+  scoringMode: text("scoring_mode").default("simple"),
   pointsWin: integer("points_win").default(3),
   pointsDraw: integer("points_draw").default(1),
   pointsLoss: integer("points_loss").default(0),
+  // Mode avancé : points selon l'ampleur (ex. BO3 : « net » = 2-0, « serré » = 2-1).
+  pointsWinClean: integer("points_win_clean").default(3),
+  pointsWinTight: integer("points_win_tight").default(2),
+  pointsLossTight: integer("points_loss_tight").default(1),
+  pointsLossClean: integer("points_loss_clean").default(0),
 });
 
 // Phases d'une compétition : ordre + type de format + config (JSON libre).
@@ -292,6 +299,9 @@ export const matches = pgTable("matches", {
   oddsAway: decimal("odds_away", { precision: 4, scale: 2 }),
   scoreHome: integer("score_home"),
   scoreAway: integer("score_away"),
+  // Points de classement saisis manuellement (mode de barème « manuel »).
+  pointsHome: integer("points_home"),
+  pointsAway: integer("points_away"),
   winnerId: varchar("winner_id").references(() => teams.id),
   drifterHomeId: varchar("drifter_home_id").references(() => players.id),
   drifterAwayId: varchar("drifter_away_id").references(() => players.id),

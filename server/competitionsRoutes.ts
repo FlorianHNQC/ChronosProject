@@ -16,9 +16,14 @@ function optionFields(b: Record<string, any>): Partial<InsertCompetition> {
   if (b.avgEloCap !== undefined) o.avgEloCap = num(b.avgEloCap);
   if (b.minElo !== undefined) o.minElo = num(b.minElo);
   if (b.noRookies !== undefined) o.noRookies = !!b.noRookies;
+  if (b.scoringMode !== undefined && ["simple", "advanced", "manual"].includes(b.scoringMode)) o.scoringMode = b.scoringMode;
   if (b.pointsWin !== undefined) o.pointsWin = num(b.pointsWin) ?? 3;
   if (b.pointsDraw !== undefined) o.pointsDraw = num(b.pointsDraw) ?? 1;
   if (b.pointsLoss !== undefined) o.pointsLoss = num(b.pointsLoss) ?? 0;
+  if (b.pointsWinClean !== undefined) o.pointsWinClean = num(b.pointsWinClean) ?? 3;
+  if (b.pointsWinTight !== undefined) o.pointsWinTight = num(b.pointsWinTight) ?? 2;
+  if (b.pointsLossTight !== undefined) o.pointsLossTight = num(b.pointsLossTight) ?? 1;
+  if (b.pointsLossClean !== undefined) o.pointsLossClean = num(b.pointsLossClean) ?? 0;
   return o;
 }
 

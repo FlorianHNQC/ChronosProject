@@ -170,9 +170,14 @@ function InfosPanel({ comp, onSaved }: { comp: Competition; onSaved: () => void 
   const [noRookies, setNoRookies] = useState(!!comp.noRookies);
   const [minElo, setMinElo] = useState(comp.minElo != null ? String(comp.minElo) : "");
   const [avgEloCap, setAvgEloCap] = useState(comp.avgEloCap != null ? String(comp.avgEloCap) : "");
+  const [scoringMode, setScoringMode] = useState((comp.scoringMode as "simple" | "advanced" | "manual") ?? "simple");
   const [pointsWin, setPointsWin] = useState(String(comp.pointsWin ?? 3));
   const [pointsDraw, setPointsDraw] = useState(String(comp.pointsDraw ?? 1));
   const [pointsLoss, setPointsLoss] = useState(String(comp.pointsLoss ?? 0));
+  const [pointsWinClean, setPointsWinClean] = useState(String(comp.pointsWinClean ?? 3));
+  const [pointsWinTight, setPointsWinTight] = useState(String(comp.pointsWinTight ?? 2));
+  const [pointsLossTight, setPointsLossTight] = useState(String(comp.pointsLossTight ?? 1));
+  const [pointsLossClean, setPointsLossClean] = useState(String(comp.pointsLossClean ?? 0));
 
   const save = useMutation({
     mutationFn: () => apiRequest("PATCH", `/api/competitions/${comp.id}`, {
@@ -186,9 +191,14 @@ function InfosPanel({ comp, onSaved }: { comp: Competition; onSaved: () => void 
       noRookies,
       minElo: minElo || null,
       avgEloCap: avgEloCap || null,
+      scoringMode,
       pointsWin: Number(pointsWin) || 0,
       pointsDraw: Number(pointsDraw) || 0,
       pointsLoss: Number(pointsLoss) || 0,
+      pointsWinClean: Number(pointsWinClean) || 0,
+      pointsWinTight: Number(pointsWinTight) || 0,
+      pointsLossTight: Number(pointsLossTight) || 0,
+      pointsLossClean: Number(pointsLossClean) || 0,
     }),
     onSuccess: () => { onSaved(); toast({ title: "Enregistré" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
@@ -243,15 +253,56 @@ function InfosPanel({ comp, onSaved }: { comp: Competition; onSaved: () => void 
       </div>
 
       <h2 className="font-semibold mb-2">Répartition des points</h2>
-      <p className="text-xs text-muted-foreground mb-2">Points attribués au classement selon l'issue d'un match.</p>
-      <div className="flex flex-wrap gap-3 mb-6">
-        <label className="text-sm"><span className="text-muted-foreground">Victoire</span>
-          <Input type="number" value={pointsWin} onChange={(e) => setPointsWin(e.target.value)} className="mt-1 w-24 h-9" /></label>
-        <label className="text-sm"><span className="text-muted-foreground">Nul</span>
-          <Input type="number" value={pointsDraw} onChange={(e) => setPointsDraw(e.target.value)} className="mt-1 w-24 h-9" /></label>
-        <label className="text-sm"><span className="text-muted-foreground">Défaite</span>
-          <Input type="number" value={pointsLoss} onChange={(e) => setPointsLoss(e.target.value)} className="mt-1 w-24 h-9" /></label>
+      <div className="flex gap-1.5 flex-wrap mb-3">
+        {([
+          { v: "simple", l: "Simple", h: "V / N / D" },
+          { v: "advanced", l: "Avancé (au score)", h: "selon l'ampleur (2-0 vs 2-1)" },
+          { v: "manual", l: "Manuel", h: "saisi par rencontre" },
+        ] as const).map((m) => (
+          <button key={m.v} onClick={() => setScoringMode(m.v)}
+            className={"text-sm px-3 py-1.5 rounded-full " + (scoringMode === m.v ? "bg-primary text-primary-foreground" : "border text-muted-foreground hover:text-foreground")}
+            title={m.h}>
+            {m.l}
+          </button>
+        ))}
       </div>
+
+      {scoringMode === "simple" && (
+        <div className="flex flex-wrap gap-3 mb-6">
+          <label className="text-sm"><span className="text-muted-foreground">Victoire</span>
+            <Input type="number" value={pointsWin} onChange={(e) => setPointsWin(e.target.value)} className="mt-1 w-24 h-9" /></label>
+          <label className="text-sm"><span className="text-muted-foreground">Nul</span>
+            <Input type="number" value={pointsDraw} onChange={(e) => setPointsDraw(e.target.value)} className="mt-1 w-24 h-9" /></label>
+          <label className="text-sm"><span className="text-muted-foreground">Défaite</span>
+            <Input type="number" value={pointsLoss} onChange={(e) => setPointsLoss(e.target.value)} className="mt-1 w-24 h-9" /></label>
+        </div>
+      )}
+
+      {scoringMode === "advanced" && (
+        <div className="mb-6">
+          <p className="text-xs text-muted-foreground mb-2">
+            « Net » = le perdant n'a gagné aucun affrontement (ex. 2-0) ; « serré » = il en a gagné au moins un (ex. 2-1).
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <label className="text-sm"><span className="text-muted-foreground">Victoire nette (2-0)</span>
+              <Input type="number" value={pointsWinClean} onChange={(e) => setPointsWinClean(e.target.value)} className="mt-1 w-28 h-9" /></label>
+            <label className="text-sm"><span className="text-muted-foreground">Victoire serrée (2-1)</span>
+              <Input type="number" value={pointsWinTight} onChange={(e) => setPointsWinTight(e.target.value)} className="mt-1 w-28 h-9" /></label>
+            <label className="text-sm"><span className="text-muted-foreground">Défaite serrée (1-2)</span>
+              <Input type="number" value={pointsLossTight} onChange={(e) => setPointsLossTight(e.target.value)} className="mt-1 w-28 h-9" /></label>
+            <label className="text-sm"><span className="text-muted-foreground">Défaite nette (0-2)</span>
+              <Input type="number" value={pointsLossClean} onChange={(e) => setPointsLossClean(e.target.value)} className="mt-1 w-28 h-9" /></label>
+            <label className="text-sm"><span className="text-muted-foreground">Nul</span>
+              <Input type="number" value={pointsDraw} onChange={(e) => setPointsDraw(e.target.value)} className="mt-1 w-24 h-9" /></label>
+          </div>
+        </div>
+      )}
+
+      {scoringMode === "manual" && (
+        <p className="text-sm text-muted-foreground mb-6 max-w-prose">
+          Les points de chaque équipe se saisissent directement sur chaque rencontre, dans l'onglet <b>Matchs</b>.
+        </p>
+      )}
 
       <Button disabled={save.isPending || !name.trim()} onClick={() => save.mutate()}>
         {save.isPending ? "Enregistrement…" : "Enregistrer les infos"}

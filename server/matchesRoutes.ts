@@ -70,7 +70,7 @@ export function registerMatchesRoutes(app: Express) {
     try {
       const b = req.body ?? {};
       const patch: Record<string, unknown> = {};
-      for (const k of ["scoreHome", "scoreAway", "winnerId", "status", "gameMode", "map", "matchType", "numGames", "roundsPerGame", "modifier"]) {
+      for (const k of ["scoreHome", "scoreAway", "winnerId", "status", "gameMode", "map", "matchType", "numGames", "roundsPerGame", "modifier", "pointsHome", "pointsAway"]) {
         if (b[k] !== undefined) patch[k] = b[k];
       }
       if (b.datetime !== undefined) {

@@ -5,7 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MatchCalendar } from "@/components/match-calendar";
-import { CompetitionStandings } from "@/components/competition-standings";
+import { CompetitionStandings, scoringFromCompetition } from "@/components/competition-standings";
 import { Bracket } from "@/components/bracket";
 import { RandomPhase } from "@/components/random-phase";
 import { ChevronLeft, CalendarDays, Trophy, GitBranch, List, ListOrdered, Shuffle } from "lucide-react";
@@ -137,9 +137,7 @@ function SeasonPhase({ matches, teams, conferences, comp }: { matches: Match[]; 
           teams={teams}
           matches={matches}
           conferences={conferences}
-          pointsWin={comp?.pointsWin ?? 3}
-          pointsDraw={comp?.pointsDraw ?? 1}
-          pointsLoss={comp?.pointsLoss ?? 0}
+          scoring={scoringFromCompetition(comp)}
         />
       ) : (
         <MatchCalendar matches={matches} teams={teams} />

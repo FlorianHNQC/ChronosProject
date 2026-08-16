@@ -3,6 +3,41 @@ import type { Team, Match, Conference } from "@shared/schema";
 
 type Row = { team: Team; j: number; v: number; n: number; d: number; bp: number; bc: number; pts: number };
 
+export type ScoringConfig = {
+  mode: "simple" | "advanced" | "manual";
+  win: number; draw: number; loss: number;
+  winClean: number; winTight: number; lossTight: number; lossClean: number;
+};
+
+const DEFAULT_SCORING: ScoringConfig = {
+  mode: "simple", win: 3, draw: 1, loss: 0,
+  winClean: 3, winTight: 2, lossTight: 1, lossClean: 0,
+};
+
+/** Construit la config de barème depuis les champs d'une compétition. */
+export function scoringFromCompetition(c: {
+  scoringMode?: string | null; pointsWin?: number | null; pointsDraw?: number | null; pointsLoss?: number | null;
+  pointsWinClean?: number | null; pointsWinTight?: number | null; pointsLossTight?: number | null; pointsLossClean?: number | null;
+} | null | undefined): ScoringConfig {
+  if (!c) return DEFAULT_SCORING;
+  const mode = (c.scoringMode as ScoringConfig["mode"]) ?? "simple";
+  return {
+    mode: ["simple", "advanced", "manual"].includes(mode) ? mode : "simple",
+    win: c.pointsWin ?? 3, draw: c.pointsDraw ?? 1, loss: c.pointsLoss ?? 0,
+    winClean: c.pointsWinClean ?? 3, winTight: c.pointsWinTight ?? 2,
+    lossTight: c.pointsLossTight ?? 1, lossClean: c.pointsLossClean ?? 0,
+  };
+}
+
+/** Résumé lisible du barème (note de bas de tableau). */
+export function scoringSummary(s: ScoringConfig): string {
+  const p = (n: number) => `${n} pt${Math.abs(n) > 1 ? "s" : ""}`;
+  if (s.mode === "manual") return "Points saisis manuellement par rencontre.";
+  if (s.mode === "advanced")
+    return `Victoire nette (ex. 2-0) = ${p(s.winClean)} · victoire serrée (2-1) = ${p(s.winTight)} · défaite serrée (1-2) = ${p(s.lossTight)} · défaite nette (0-2) = ${p(s.lossClean)} · nul = ${p(s.draw)}.`;
+  return `Victoire = ${p(s.win)} · Nul = ${p(s.draw)} · Défaite = ${p(s.loss)}.`;
+}
+
 /**
  * Classement de saison : bilan de chaque équipe calculé sur TOUS ses matchs
  * terminés de la compétition (inter-conférences inclus). L'affichage est groupé
@@ -12,16 +47,12 @@ export function CompetitionStandings({
   teams,
   matches,
   conferences,
-  pointsWin = 3,
-  pointsDraw = 1,
-  pointsLoss = 0,
+  scoring = DEFAULT_SCORING,
 }: {
   teams: Team[];
   matches: Match[];
   conferences: Conference[];
-  pointsWin?: number;
-  pointsDraw?: number;
-  pointsLoss?: number;
+  scoring?: ScoringConfig;
 }) {
   const rows = useMemo(() => {
     const ids = new Set(teams.map((t) => t.id));
@@ -36,18 +67,36 @@ export function CompetitionStandings({
       const sh = m.scoreHome ?? 0;
       const sa = m.scoreAway ?? 0;
       h.j++; a.j++; h.bp += sh; h.bc += sa; a.bp += sa; a.bc += sh;
-      const win = (r: Row) => { r.v++; r.pts += pointsWin; };
-      const lose = (r: Row) => { r.d++; r.pts += pointsLoss; };
-      const draw = (r: Row) => { r.n++; r.pts += pointsDraw; };
-      // Le vainqueur est stocké dans winnerId (les scores ne sont pas toujours renseignés).
-      if (m.winnerId === m.teamHomeId) { win(h); lose(a); }
-      else if (m.winnerId === m.teamAwayId) { win(a); lose(h); }
-      else if (sh > sa) { win(h); lose(a); }
-      else if (sh < sa) { win(a); lose(h); }
-      else { draw(h); draw(a); }
+
+      // Issue de la rencontre.
+      const homeWins = m.winnerId === m.teamHomeId || (m.winnerId == null && sh > sa);
+      const awayWins = m.winnerId === m.teamAwayId || (m.winnerId == null && sa > sh);
+      const isDraw = !homeWins && !awayWins;
+
+      // Comptage V/N/D (indépendant du barème).
+      if (isDraw) { h.n++; a.n++; } else if (homeWins) { h.v++; a.d++; } else { a.v++; h.d++; }
+
+      // Attribution des points selon le mode.
+      if (scoring.mode === "manual") {
+        h.pts += m.pointsHome ?? 0;
+        a.pts += m.pointsAway ?? 0;
+        continue;
+      }
+      if (isDraw) { h.pts += scoring.draw; a.pts += scoring.draw; continue; }
+      const winner = homeWins ? h : a;
+      const loser = homeWins ? a : h;
+      const loserGames = homeWins ? sa : sh; // manches gagnées par le perdant
+      if (scoring.mode === "advanced") {
+        const clean = loserGames <= 0;
+        winner.pts += clean ? scoring.winClean : scoring.winTight;
+        loser.pts += clean ? scoring.lossClean : scoring.lossTight;
+      } else {
+        winner.pts += scoring.win;
+        loser.pts += scoring.loss;
+      }
     }
     return rec;
-  }, [teams, matches, pointsWin, pointsDraw, pointsLoss]);
+  }, [teams, matches, scoring]);
 
   const sortRows = (list: Row[]) =>
     [...list].sort(
@@ -126,7 +175,7 @@ export function CompetitionStandings({
           </div>
         </div>
       ))}
-      <p className="text-[11px] text-muted-foreground">Victoire = {pointsWin} pt{pointsWin > 1 ? "s" : ""} · Nul = {pointsDraw} pt{pointsDraw > 1 ? "s" : ""} · Défaite = {pointsLoss} pt{pointsLoss > 1 ? "s" : ""}.</p>
+      <p className="text-[11px] text-muted-foreground">{scoringSummary(scoring)}</p>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
-import type { Match, Team } from "@shared/schema";
+import type { Competition, Match, Team } from "@shared/schema";
 
 const MATCH_TYPES = [
   { value: "intra", label: "Intra-conférence" },
@@ -45,6 +45,12 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
     enabled: !!competitionId,
     queryFn: async () => (await apiRequest("GET", `/api/matches?competitionId=${competitionId}`)).json(),
   });
+  const { data: comp } = useQuery<Competition>({
+    queryKey: ["/api/competitions", competitionId],
+    enabled: !!competitionId,
+    queryFn: async () => (await apiRequest("GET", `/api/competitions/${competitionId}`)).json(),
+  });
+  const manualPoints = comp?.scoringMode === "manual";
 
   const teamName = useMemo(() => {
     const m = new Map<string, string>();
@@ -117,7 +123,7 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
 
       <div className="space-y-2">
         {(matches ?? []).map((m) => (
-          <MatchRow key={m.id} match={m} competitionId={competitionId} homeName={teamName(m.teamHomeId)} awayName={teamName(m.teamAwayId)} />
+          <MatchRow key={m.id} match={m} competitionId={competitionId} homeName={teamName(m.teamHomeId)} awayName={teamName(m.teamAwayId)} manualPoints={manualPoints} />
         ))}
         {(matches ?? []).length === 0 && <p className="text-sm text-muted-foreground">Aucun match.</p>}
       </div>
@@ -125,11 +131,13 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
   );
 }
 
-function MatchRow({ match, competitionId, homeName, awayName }: { match: Match; competitionId: string; homeName: string; awayName: string }) {
+function MatchRow({ match, competitionId, homeName, awayName, manualPoints }: { match: Match; competitionId: string; homeName: string; awayName: string; manualPoints: boolean }) {
   const { toast } = useToast();
   const [sh, setSh] = useState(String(match.scoreHome ?? ""));
   const [sa, setSa] = useState(String(match.scoreAway ?? ""));
   const [dt, setDt] = useState(toLocalInput(match.datetime as unknown as string));
+  const [ph, setPh] = useState(match.pointsHome != null ? String(match.pointsHome) : "");
+  const [pa, setPa] = useState(match.pointsAway != null ? String(match.pointsAway) : "");
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/matches", competitionId] });
 
@@ -140,6 +148,14 @@ function MatchRow({ match, competitionId, homeName, awayName }: { match: Match; 
       return apiRequest("PATCH", `/api/matches/${match.id}`, { scoreHome: h, scoreAway: a, winnerId, status: "completed" });
     },
     onSuccess: () => { invalidate(); toast({ title: "Résultat enregistré" }); },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
+  const savePoints = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/matches/${match.id}`, {
+      pointsHome: ph === "" ? null : Number(ph),
+      pointsAway: pa === "" ? null : Number(pa),
+    }),
+    onSuccess: () => { invalidate(); toast({ title: "Points enregistrés" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
   const schedule = useMutation({
@@ -172,6 +188,15 @@ function MatchRow({ match, competitionId, homeName, awayName }: { match: Match; 
         <span>{ng} affrontement{ng > 1 ? "s" : ""} · {rpg} manche{rpg > 1 ? "s" : ""}/affr.</span>
         {match.modifier && <span className="px-1.5 py-0.5 rounded bg-muted">Mod. : {match.modifier}</span>}
       </div>
+      {manualPoints && (
+        <div className="flex items-center gap-2 flex-wrap pl-1">
+          <span className="text-xs text-muted-foreground">Points au classement</span>
+          <Input type="number" value={ph} onChange={(e) => setPh(e.target.value)} className="w-16 h-8 text-center" title={`Points ${homeName}`} />
+          <span className="text-muted-foreground">·</span>
+          <Input type="number" value={pa} onChange={(e) => setPa(e.target.value)} className="w-16 h-8 text-center" title={`Points ${awayName}`} />
+          <Button size="sm" variant="outline" disabled={savePoints.isPending} onClick={() => savePoints.mutate()}>Enregistrer les points</Button>
+        </div>
+      )}
       <div className="flex items-center gap-2 flex-wrap pl-1">
         <span className="text-xs text-muted-foreground">Date</span>
         <Input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className="w-52 h-8" />
