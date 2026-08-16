@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
@@ -101,13 +102,14 @@ export function CompetitionsAdminPage() {
             <div className="space-y-2">
               {list.map((c) => (
                 <Card key={c.id} className="flex items-center gap-3 p-2.5 flex-wrap">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium truncate">{c.name}</div>
+                  <Link href={`/admin/competitions/${c.id}`} className="min-w-0 flex-1 group" title="Ouvrir la gestion">
+                    <div className="font-medium truncate group-hover:text-primary">{c.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {TYPES.find((t) => t.value === c.type)?.label ?? c.type}
                       {c.closedAt ? ` · clôturée le ${new Date(c.closedAt).toLocaleDateString("fr-FR")}` : ""}
+                      <span className="ml-1 opacity-0 group-hover:opacity-100">· gérer →</span>
                     </div>
-                  </div>
+                  </Link>
                   {c.status === "draft" && (
                     <Button size="sm" variant="secondary" disabled={activate.isPending} onClick={() => activate.mutate(c.id)}>
                       <Play className="h-4 w-4 mr-1" />Activer
