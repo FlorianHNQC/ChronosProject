@@ -6,6 +6,7 @@
 // BrawlAPI (même hôte que le service icônes, déjà joignable depuis le serveur).
 const MAPS_URL = "https://api.brawlapi.com/v1/maps";
 const MODES_URL = "https://api.brawlapi.com/v1/gamemodes";
+const BRAWLERS_URL = "https://api.brawlapi.com/v1/brawlers";
 const TTL_MS = 24 * 60 * 60 * 1000;
 const HEADERS = { Accept: "application/json" };
 
@@ -18,6 +19,7 @@ function asList(json: any): any[] {
 }
 
 export type GameModeItem = { id: number | null; name: string; imageUrl: string | null; color: string | null };
+export type BrawlerItem = { id: number | null; name: string; imageUrl: string | null };
 export type MapItem = {
   id: number | null;
   name: string;
@@ -30,6 +32,26 @@ export type MapItem = {
 type Cache<T> = { data: T; expiresAt: number } | null;
 let modesCache: Cache<GameModeItem[]> = null;
 let mapsCache: Cache<MapItem[]> = null;
+let brawlersCache: Cache<BrawlerItem[]> = null;
+
+export async function getBrawlers(): Promise<BrawlerItem[]> {
+  const now = Date.now();
+  if (brawlersCache && brawlersCache.expiresAt > now) return brawlersCache.data;
+  try {
+    const res = await fetch(BRAWLERS_URL, { headers: HEADERS });
+    if (!res.ok) throw new Error(`brawlers ${res.status}`);
+    const list = asList(await res.json());
+    const data: BrawlerItem[] = list
+      .filter((b) => b && b.name)
+      .map((b) => ({ id: b.id ?? null, name: String(b.name), imageUrl: b.imageUrl ?? null }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    brawlersCache = { data, expiresAt: now + TTL_MS };
+    return data;
+  } catch (err) {
+    console.warn("[brawlapi] brawlers indisponible :", (err as Error).message);
+    return brawlersCache?.data ?? [];
+  }
+}
 
 export async function getGameModes(): Promise<GameModeItem[]> {
   const now = Date.now();

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { UserRound, ArrowLeft } from "lucide-react";
-import { MetaBadges } from "@/lib/bs-catalog";
+import { MatchVisual } from "@/components/match-visual";
 import type { Match, Team } from "@shared/schema";
 
 type MatchStat = {
@@ -54,17 +54,12 @@ export function MatchDetailPage() {
       </Link>
 
       {match && (
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <span className="font-bold text-lg text-right flex-1">{teamName(match.teamHomeId)}</span>
-          <span className="font-mono text-xl px-3">{done ? `${match.scoreHome ?? 0} – ${match.scoreAway ?? 0}` : "vs"}</span>
-          <span className="font-bold text-lg flex-1">{teamName(match.teamAwayId)}</span>
+        <div className="flex justify-center mb-4">
+          <MatchVisual match={match} homeName={teamName(match.teamHomeId)} awayName={teamName(match.teamAwayId)} className="w-full max-w-md" />
         </div>
       )}
-      {match && (
-        <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
-          <MetaBadges gameMode={match.gameMode} map={match.map} />
-          {match.datetime && <span className="text-xs text-muted-foreground">{new Date(match.datetime).toLocaleDateString("fr-FR")}</span>}
-        </div>
+      {match?.datetime && (
+        <p className="text-center text-xs text-muted-foreground mb-8">{new Date(match.datetime).toLocaleDateString("fr-FR")}</p>
       )}
 
       {(stats ?? []).length === 0 ? (

@@ -5,6 +5,7 @@ import type { ImageOption } from "@/components/image-select";
 
 export type BsMode = { id: number | null; name: string; imageUrl: string | null; color: string | null };
 export type BsMap = { id: number | null; name: string; imageUrl: string | null; mode: string | null; modeImageUrl: string | null; modeColor: string | null };
+export type BsBrawler = { id: number | null; name: string; imageUrl: string | null };
 
 /**
  * Catalogue Brawl Stars (maps & modes via Brawlify) : options pour les listes
@@ -21,14 +22,36 @@ export function useBsCatalog() {
     queryFn: async () => (await apiRequest("GET", "/api/bs/maps")).json(),
     staleTime: 60 * 60 * 1000,
   });
+  const { data: brawlers } = useQuery<BsBrawler[]>({
+    queryKey: ["/api/bs/brawlers"],
+    queryFn: async () => (await apiRequest("GET", "/api/bs/brawlers")).json(),
+    staleTime: 60 * 60 * 1000,
+  });
 
   return useMemo(() => {
-    const modeByName = new Map((modes ?? []).map((m) => [m.name.toLowerCase(), m]));
-    const mapByName = new Map((maps ?? []).map((m) => [m.name.toLowerCase(), m]));
+    const norm = (s: string) => s.trim().toLowerCase();
+    const modeByName = new Map((modes ?? []).map((m) => [norm(m.name), m]));
+    const mapByName = new Map((maps ?? []).map((m) => [norm(m.name), m]));
+    const brawlerByName = new Map((brawlers ?? []).map((b) => [norm(b.name), b]));
     const modeOptions: ImageOption[] = (modes ?? []).map((m) => ({ value: m.name, label: m.name, imageUrl: m.imageUrl, color: m.color }));
     const mapOptions: ImageOption[] = (maps ?? []).map((m) => ({ value: m.name, label: m.name, imageUrl: m.imageUrl, sub: m.mode, subImageUrl: m.modeImageUrl }));
-    return { modes: modes ?? [], maps: maps ?? [], modeByName, mapByName, modeOptions, mapOptions };
-  }, [modes, maps]);
+    return { modes: modes ?? [], maps: maps ?? [], brawlers: brawlers ?? [], modeByName, mapByName, brawlerByName, modeOptions, mapOptions };
+  }, [modes, maps, brawlers]);
+}
+
+/** Icône d'un brawler par nom (ex. pour les bans). */
+export function BrawlerIcon({ name, size = 28, title }: { name: string; size?: number; title?: string }) {
+  const { brawlerByName } = useBsCatalog();
+  const b = brawlerByName.get(name.trim().toLowerCase());
+  return (
+    <span title={title ?? name} className="inline-flex flex-col items-center">
+      {b?.imageUrl ? (
+        <img src={b.imageUrl} alt={name} style={{ width: size, height: size }} className="rounded object-cover ring-1 ring-border" />
+      ) : (
+        <span style={{ width: size, height: size }} className="rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">{name.slice(0, 2)}</span>
+      )}
+    </span>
+  );
 }
 
 /** Puce d'un mode de jeu (icône + nom). */

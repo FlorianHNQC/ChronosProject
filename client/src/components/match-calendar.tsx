@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, List, ChevronLeft, ChevronRight } from "lucide-react";
 import { MetaBadges } from "@/lib/bs-catalog";
+import { MatchVisual } from "@/components/match-visual";
 import type { Match, Team } from "@shared/schema";
 
 const STATUS: Record<string, { label: string; color: string }> = {
@@ -110,11 +111,17 @@ export function MatchCalendar({ matches, teams }: { matches: Match[]; teams: Tea
   };
   const renderAgenda = (groups: [string, Match[]][]) =>
     groups.map(([key, list]) => (
-      <div key={key} className="mb-5">
+      <div key={key} className="mb-6">
         <div className="text-sm font-semibold text-primary capitalize mb-2 flex items-center gap-2">
           <CalendarDays className="h-4 w-4" /> {dayLabel(key)} <span className="text-muted-foreground font-normal">· {list.length}</span>
         </div>
-        <div className="space-y-2">{list.map(renderRow)}</div>
+        {/* Grands visuels en défilement horizontal (évite un scroll vertical interminable). */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+          {list.map((m) => (
+            <MatchVisual key={m.id} match={m} homeName={teamName(m.teamHomeId)} awayName={teamName(m.teamAwayId)}
+              detailHref={`/matchs/${m.id}`} className="w-[320px]" />
+          ))}
+        </div>
       </div>
     ));
 
