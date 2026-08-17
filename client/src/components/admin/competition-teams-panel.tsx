@@ -105,6 +105,12 @@ function TeamCard({ team, competitionId }: { team: Team; competitionId: string }
     onSuccess: () => { invalidateTeams(); toast({ title: "Logo mis à jour" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
+  const [pool, setPool] = useState(team.poolLabel ?? "");
+  const setPoolMut = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/teams/${team.id}`, { poolLabel: pool.trim() || null }),
+    onSuccess: () => { invalidateTeams(); toast({ title: "Poule enregistrée" }); },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
 
   const inTeam = new Set((roster ?? []).map((r) => r.playerId));
   const available = (allPlayers ?? []).filter((p) => !inTeam.has(p.id));
@@ -126,9 +132,14 @@ function TeamCard({ team, competitionId }: { team: Team; competitionId: string }
         <span className="font-semibold">{team.name}</span>
         <span className="text-xs text-muted-foreground">[{team.tag}]</span>
         {setLogo.isPending && <span className="text-xs text-muted-foreground">envoi…</span>}
-        <Button size="icon" variant="ghost" className="ml-auto" title="Supprimer l'équipe" onClick={() => removeTeam.mutate()}>
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        <div className="ml-auto flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">Poule</span>
+          <Input value={pool} onChange={(e) => setPool(e.target.value)} placeholder="—" className="w-16 h-8 text-center"
+            onKeyDown={(e) => { if (e.key === "Enter") setPoolMut.mutate(); }} onBlur={() => { if ((team.poolLabel ?? "") !== pool.trim()) setPoolMut.mutate(); }} />
+          <Button size="icon" variant="ghost" title="Supprimer l'équipe" onClick={() => removeTeam.mutate()}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-2">

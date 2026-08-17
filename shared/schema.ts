@@ -140,6 +140,9 @@ export const teams = pgTable("teams", {
   logoUrl: text("logo_url"),
   conferenceId: varchar("conference_id").references(() => conferences.id),
   competitionId: varchar("competition_id").references(() => competitions.id),
+  // Poule (round-robin) à laquelle l'équipe appartient dans cette compétition.
+  // Distinct des conférences (divisions). Libellé libre : « A », « Poule 1 »…
+  poolLabel: text("pool_label"),
   tokens: integer("tokens").default(100),
   wins: integer("wins").default(0),
   losses: integer("losses").default(0),

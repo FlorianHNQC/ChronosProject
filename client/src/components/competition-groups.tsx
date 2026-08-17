@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useMemo } from "react";
+import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { List, LayoutGrid, ChevronLeft } from "lucide-react";
-import type { Team, Match, Conference } from "@shared/schema";
+import { UserRound } from "lucide-react";
+import type { Team, Match } from "@shared/schema";
 
 type Row = { team: Team; j: number; v: number; n: number; d: number; bp: number; bc: number; pts: number };
+type RosterMember = { playerId: string; pseudo: string; avatarUrl: string | null; isCaptain: boolean | null };
 
 function standings(teamsInPoule: Team[], matches: Match[]): Row[] {
   const ids = new Set(teamsInPoule.map((t) => t.id));
@@ -32,144 +34,126 @@ function standings(teamsInPoule: Team[], matches: Match[]): Row[] {
 }
 
 /**
- * Phase de poules : liste des poules (= conférences ayant des équipes dans la
- * compétition) ; en cliquant sur une poule, sa grille de classement (V/N/D +
- * points), avec bascule vers la liste des matchs de la poule.
+ * Phase de poules : chaque poule (regroupement d'équipes, champ pool_label)
+ * affiche son classement round-robin ET la composition de chaque équipe
+ * (joueurs), pour qu'on voie clairement qui est dans quelle poule.
  */
-export function CompetitionGroups({
-  conferences,
-  teams,
-  matches,
-}: {
-  conferences: Conference[];
-  teams: Team[];
-  matches: Match[];
-}) {
-  const [, navigate] = useLocation();
-  const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<"grille" | "liste">("grille");
-
+export function CompetitionGroups({ teams, matches }: { teams: Team[]; matches: Match[] }) {
   const poules = useMemo(() => {
-    const byConf = new Map<string, Team[]>();
+    const by = new Map<string, Team[]>();
     for (const t of teams) {
-      if (!t.conferenceId) continue;
-      if (!byConf.has(t.conferenceId)) byConf.set(t.conferenceId, []);
-      byConf.get(t.conferenceId)!.push(t);
+      const key = (t.poolLabel ?? "").trim();
+      if (!key) continue;
+      if (!by.has(key)) by.set(key, []);
+      by.get(key)!.push(t);
     }
-    const nameOf = new Map(conferences.map((c) => [c.id, c]));
-    return Array.from(byConf.entries()).map(([id, list]) => ({
-      id,
-      conf: nameOf.get(id) ?? null,
-      teams: list,
-    }));
-  }, [teams, conferences]);
-
-  const teamName = useMemo(() => {
-    const m = new Map(teams.map((t) => [t.id, t.name]));
-    return (id: string | null) => (id ? m.get(id) ?? "?" : "?");
+    return Array.from(by.entries())
+      .map(([label, list]) => ({ label, teams: list }))
+      .sort((a, b) => a.label.localeCompare(b.label, "fr", { numeric: true }));
   }, [teams]);
 
-  if (poules.length === 0) {
-    return <p className="text-sm text-muted-foreground">Pas de poules pour cette compétition.</p>;
-  }
+  const unassigned = useMemo(() => teams.filter((t) => !(t.poolLabel ?? "").trim()), [teams]);
 
-  // Vue « liste des poules »
-  if (!selected) {
+  if (poules.length === 0) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {poules.map((p) => (
-          <Card
-            key={p.id}
-            className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => { setSelected(p.id); setView("grille"); }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: p.conf?.color ?? "#888" }} />
-              <span className="font-semibold">{p.conf?.name ?? "Poule"}</span>
-              <span className="text-xs text-muted-foreground ml-auto">{p.teams.length} équipes</span>
-            </div>
-          </Card>
-        ))}
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Aucune poule définie. Un admin peut affecter chaque équipe à une poule dans la gestion de la compétition (onglet Équipes).
+      </p>
     );
   }
 
-  const poule = poules.find((p) => p.id === selected);
-  if (!poule) return null;
-  const rows = standings(poule.teams, matches);
-  const ids = new Set(poule.teams.map((t) => t.id));
-  const pouleMatches = matches.filter(
-    (m) => m.teamHomeId && m.teamAwayId && ids.has(m.teamHomeId) && ids.has(m.teamAwayId),
-  );
-
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-          <ChevronLeft className="h-4 w-4 mr-1" /> Poules
-        </Button>
-        <span className="font-semibold flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: poule.conf?.color ?? "#888" }} />
-          {poule.conf?.name ?? "Poule"}
-        </span>
-        <div className="ml-auto flex items-center gap-1 rounded-md border p-0.5">
-          <Button variant={view === "grille" ? "secondary" : "ghost"} size="sm" className="h-7" onClick={() => setView("grille")}>
-            <LayoutGrid className="h-4 w-4 mr-1" /> Classement
-          </Button>
-          <Button variant={view === "liste" ? "secondary" : "ghost"} size="sm" className="h-7" onClick={() => setView("liste")}>
-            <List className="h-4 w-4 mr-1" /> Matchs
-          </Button>
-        </div>
+    <div className="space-y-6">
+      {poules.map((p) => (
+        <PouleCard key={p.label} label={p.label} teams={p.teams} matches={matches} />
+      ))}
+      {unassigned.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Sans poule : {unassigned.map((t) => t.name).join(", ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PouleCard({ label, teams, matches }: { label: string; teams: Team[]; matches: Match[] }) {
+  const rows = standings(teams, matches);
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-sm font-bold px-2 py-0.5 rounded bg-primary/10 text-primary">Poule {label}</span>
+        <span className="text-xs text-muted-foreground">{teams.length} équipes</span>
       </div>
 
-      {view === "grille" ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-muted-foreground border-b">
-                <th className="text-left font-medium py-2 pl-2 w-8">#</th>
-                <th className="text-left font-medium py-2">Équipe</th>
-                <th className="text-center font-medium py-2 w-10">J</th>
-                <th className="text-center font-medium py-2 w-10">V</th>
-                <th className="text-center font-medium py-2 w-10">N</th>
-                <th className="text-center font-medium py-2 w-10">D</th>
-                <th className="text-center font-medium py-2 w-14">Diff</th>
-                <th className="text-center font-medium py-2 w-12 pr-2">Pts</th>
+      {/* Classement de la poule */}
+      <div className="overflow-x-auto mb-4">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-muted-foreground border-b">
+              <th className="text-left font-medium py-1.5 pl-2 w-8">#</th>
+              <th className="text-left font-medium py-1.5">Équipe</th>
+              <th className="text-center font-medium py-1.5 w-10">J</th>
+              <th className="text-center font-medium py-1.5 w-10">V</th>
+              <th className="text-center font-medium py-1.5 w-10">N</th>
+              <th className="text-center font-medium py-1.5 w-10">D</th>
+              <th className="text-center font-medium py-1.5 w-14">Diff</th>
+              <th className="text-center font-medium py-1.5 w-12 pr-2">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.team.id} className="border-b last:border-0">
+                <td className="py-1.5 pl-2 text-muted-foreground">{i + 1}</td>
+                <td className="py-1.5 font-medium truncate">
+                  <Link href={`/equipes/${r.team.id}`} className="hover:text-primary hover:underline">{r.team.name}</Link>
+                </td>
+                <td className="py-1.5 text-center tabular-nums">{r.j}</td>
+                <td className="py-1.5 text-center tabular-nums">{r.v}</td>
+                <td className="py-1.5 text-center tabular-nums">{r.n}</td>
+                <td className="py-1.5 text-center tabular-nums">{r.d}</td>
+                <td className="py-1.5 text-center tabular-nums text-muted-foreground">{r.bp - r.bc > 0 ? "+" : ""}{r.bp - r.bc}</td>
+                <td className="py-1.5 text-center font-bold tabular-nums pr-2">{r.pts}</td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={r.team.id} className="border-b last:border-0 hover:bg-muted/40">
-                  <td className="py-2 pl-2 text-muted-foreground">{i + 1}</td>
-                  <td className="py-2 font-medium truncate">{r.team.name}</td>
-                  <td className="py-2 text-center tabular-nums">{r.j}</td>
-                  <td className="py-2 text-center tabular-nums">{r.v}</td>
-                  <td className="py-2 text-center tabular-nums">{r.n}</td>
-                  <td className="py-2 text-center tabular-nums">{r.d}</td>
-                  <td className="py-2 text-center tabular-nums text-muted-foreground">{r.bp - r.bc > 0 ? "+" : ""}{r.bp - r.bc}</td>
-                  <td className="py-2 text-center font-bold tabular-nums pr-2">{r.pts}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-[11px] text-muted-foreground mt-2">Victoire = 3 pts · Nul = 1 pt · Défaite = 0.</p>
-        </div>
-      ) : pouleMatches.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aucun match dans cette poule.</p>
-      ) : (
-        <div className="space-y-2">
-          {pouleMatches.map((m) => {
-            const done = m.status === "completed";
-            return (
-              <Card key={m.id} onClick={() => navigate(`/matchs/${m.id}`)} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/40">
-                <span className="font-medium truncate text-right flex-1">{teamName(m.teamHomeId)}</span>
-                <span className="font-mono text-sm shrink-0">{done ? `${m.scoreHome ?? 0} – ${m.scoreAway ?? 0}` : "vs"}</span>
-                <span className="font-medium truncate flex-1">{teamName(m.teamAwayId)}</span>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Composition : équipes et leurs joueurs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {teams.map((t) => <PouleTeam key={t.id} team={t} />)}
+      </div>
+    </Card>
+  );
+}
+
+function PouleTeam({ team }: { team: Team }) {
+  const { data: roster } = useQuery<RosterMember[]>({
+    queryKey: ["/api/teams", team.id, "roster"],
+    queryFn: async () => (await apiRequest("GET", `/api/teams/${team.id}/roster`)).json(),
+  });
+  return (
+    <div className="border rounded-lg p-2.5">
+      <Link href={`/equipes/${team.id}`} className="flex items-center gap-2 mb-2 group w-fit">
+        {team.logoUrl ? (
+          <img src={team.logoUrl} alt={team.name} className="h-6 w-6 rounded object-cover" />
+        ) : null}
+        <span className="font-semibold text-sm group-hover:text-primary">{team.name}</span>
+        <span className="text-xs text-muted-foreground">[{team.tag}]</span>
+      </Link>
+      <div className="flex flex-wrap gap-2">
+        {(roster ?? []).map((m) => (
+          <Link key={m.playerId} href={`/joueurs/${m.playerId}`} className="flex items-center gap-1.5 group">
+            {m.avatarUrl ? (
+              <img src={m.avatarUrl} alt={m.pseudo} className="h-6 w-6 rounded object-cover bg-muted ring-1 ring-border" />
+            ) : (
+              <div className="h-6 w-6 rounded bg-muted flex items-center justify-center ring-1 ring-border"><UserRound className="h-3.5 w-3.5 text-muted-foreground" /></div>
+            )}
+            <span className="text-xs group-hover:text-primary">{m.pseudo}</span>
+          </Link>
+        ))}
+        {(roster ?? []).length === 0 && <span className="text-xs text-muted-foreground">Effectif vide.</span>}
+      </div>
     </div>
   );
 }

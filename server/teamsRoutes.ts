@@ -55,7 +55,7 @@ export function registerTeamsRoutes(app: Express) {
   app.patch("/api/teams/:id", async (req, res, next) => {
     try {
       const patch: Record<string, unknown> = {};
-      for (const k of ["name", "tag", "conferenceId", "logoUrl", "competitionId"]) {
+      for (const k of ["name", "tag", "conferenceId", "logoUrl", "competitionId", "poolLabel"]) {
         if (req.body?.[k] !== undefined) patch[k] = req.body[k];
       }
       const t = await teamsStore.update(req.params.id, patch);

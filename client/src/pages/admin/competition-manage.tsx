@@ -17,7 +17,8 @@ import { RandomTournamentPanel } from "@/components/admin/random-tournament-pane
 import { CompositionRulesPanel } from "@/components/admin/composition-rules-panel";
 import { DriftersPanel } from "@/components/admin/drifters-panel";
 import { AwardsAdminPanel } from "@/components/admin/awards-admin-panel";
-import type { Competition, CompetitionPhase } from "@shared/schema";
+import { CompetitionGroups } from "@/components/competition-groups";
+import type { Competition, CompetitionPhase, Team, Match } from "@shared/schema";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   draft: { label: "Brouillon", color: "#8B93A7" },
@@ -36,7 +37,7 @@ const FORMATS: { key: FmtKey; label: string; icon: typeof CalendarDays; desc: st
 ];
 const fmt = (k: string) => FORMATS.find((f) => f.key === k);
 
-type TabKey = "infos" | "phases" | "equipes" | "matchs" | "aleatoire" | "regles" | "drifters" | "recompenses";
+type TabKey = "infos" | "phases" | "equipes" | "poules" | "matchs" | "aleatoire" | "regles" | "drifters" | "recompenses";
 
 function toDateInput(v: string | Date | null | undefined): string {
   if (!v) return "";
@@ -107,6 +108,7 @@ export function CompetitionManagePage() {
     { key: "infos", label: "Infos & dates", icon: Info },
     { key: "phases", label: "Phases", icon: LayoutList },
     { key: "equipes", label: "Équipes", icon: Users },
+    { key: "poules", label: "Poules", icon: LayoutGrid },
     { key: "matchs", label: "Matchs", icon: CalendarDays },
     ...(isRandom ? [{ key: "aleatoire" as TabKey, label: "Aléatoire", icon: Shuffle }] : []),
     { key: "regles", label: "Règles compo", icon: ShieldCheck },
@@ -163,6 +165,7 @@ export function CompetitionManagePage() {
       {tab === "infos" && comp && <InfosPanel comp={comp} onSaved={invalidate} />}
       {tab === "phases" && <PhasesPanel competitionId={id} phases={phases ?? []} onSaved={() => queryClient.invalidateQueries({ queryKey: ["/api/competitions", id, "phases"] })} />}
       {tab === "equipes" && <CompetitionTeamsPanel competitionId={id} />}
+      {tab === "poules" && <PoulesTab competitionId={id} />}
       {tab === "matchs" && <CompetitionMatchesPanel competitionId={id} />}
       {tab === "aleatoire" && isRandom && <RandomTournamentPanel competitionId={id} />}
       {tab === "regles" && <CompositionRulesPanel competitionId={id} />}
@@ -428,6 +431,26 @@ function PhaseConfig({ type, config: c, onConfig }: { type: FmtKey; config: Reco
     </label>
   );
   return null;
+}
+
+// Onglet Poules (visuel admin) : réutilise le rendu public des poules.
+function PoulesTab({ competitionId }: { competitionId: string }) {
+  const { data: teams } = useQuery<Team[]>({
+    queryKey: ["/api/teams", competitionId],
+    queryFn: async () => (await apiRequest("GET", `/api/teams?competitionId=${competitionId}`)).json(),
+  });
+  const { data: matches } = useQuery<Match[]>({
+    queryKey: ["/api/matches", competitionId],
+    queryFn: async () => (await apiRequest("GET", `/api/matches?competitionId=${competitionId}`)).json(),
+  });
+  return (
+    <div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Affecte chaque équipe à une poule dans l'onglet <b>Équipes</b> (champ « Poule »). Le classement et les compositions apparaissent ici et sur la page publique de la compétition.
+      </p>
+      <CompetitionGroups teams={teams ?? []} matches={matches ?? []} />
+    </div>
+  );
 }
 
 function safeParse(s: string | null): Record<string, unknown> {
