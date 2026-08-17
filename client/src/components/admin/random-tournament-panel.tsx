@@ -95,6 +95,28 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
     onSuccess: () => { invalidate(); toast({ title: "Tour supprimé" }); },
   });
 
+  // Publication des poules (round-robin intra ou tirage inter).
+  const [pouleScope, setPouleScope] = useState<"intra" | "inter">("intra");
+  const genPoules = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/random/${cid}/generate-poules`, { scope: pouleScope, balanceElo }),
+    onSuccess: () => { invalidate(); toast({ title: "Poules publiées", description: "Affrontements générés." }); },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
+
+  // Compositeur d'affrontement manuel (sans équipe).
+  const [maRound, setMaRound] = useState("");
+  const [maA, setMaA] = useState<string[]>([]);
+  const [maB, setMaB] = useState<string[]>([]);
+  const [maMode, setMaMode] = useState("");
+  const [maMap, setMaMap] = useState("");
+  const addMatch = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/random/${cid}/matches`, {
+      roundId: maRound || undefined, teamA: maA, teamB: maB, gameMode: maMode || undefined, map: maMap || undefined,
+    }),
+    onSuccess: () => { setMaA([]); setMaB([]); setMaMode(""); setMaMap(""); invalidate(); toast({ title: "Affrontement créé" }); },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
+
   const poolIds = useMemo(() => new Set((pool ?? []).map((p) => p.playerId)), [pool]);
   const addable = useMemo(() => [...(allPlayers ?? [])].filter((p) => !poolIds.has(p.id)).sort((a, b) => a.pseudo.localeCompare(b.pseudo)), [allPlayers, poolIds]);
 
@@ -136,10 +158,46 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
       {/* Poules de joueurs */}
       {(pool ?? []).some((p) => (p.poolLabel ?? "").trim()) && (
         <Card className="p-4 mb-6">
-          <h2 className="font-semibold mb-3 flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-primary" /> Poules</h2>
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <h2 className="font-semibold flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-primary" /> Poules</h2>
+            <div className="ml-auto flex items-center gap-2">
+              <select value={pouleScope} onChange={(e) => setPouleScope(e.target.value as "intra" | "inter")} className="h-8 rounded-md border bg-background px-2 text-xs">
+                <option value="intra">Matchs intra-poule</option>
+                <option value="inter">Matchs inter-poules</option>
+              </select>
+              <Button size="sm" disabled={genPoules.isPending} onClick={() => genPoules.mutate()} title="Générer les affrontements des poules (round-robin)">
+                {genPoules.isPending ? "Publication…" : "Publier les poules"}
+              </Button>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            « Publier » crée les affrontements : en intra, round-robin des trios formés au sein de chaque poule (avec 9 joueurs → 3 trios → 3 matchs). Utilise l'option « Équilibrer par Elo » ci-dessus pour équilibrer les trios.
+          </p>
           <PlayerPoules entrants={pool ?? []} records={board ?? []} />
         </Card>
       )}
+
+      {/* Compositeur d'affrontement manuel (sans équipe) */}
+      <Card className="p-4 mb-6">
+        <h2 className="font-semibold mb-1">Composer un affrontement</h2>
+        <p className="text-xs text-muted-foreground mb-3">Choisis les joueurs de chaque camp — sans créer d'équipe. Pratique pour un match intra-poule précis ou pour faire jouer un trio une 2ᵉ fois.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <SidePicker label="Équipe A" value={maA} onChange={setMaA} pool={pool ?? []} exclude={maB} />
+          <SidePicker label="Équipe B" value={maB} onChange={setMaB} pool={pool ?? []} exclude={maA} />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Tour</span>
+          <select value={maRound} onChange={(e) => setMaRound(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm">
+            <option value="">Nouveau tour</option>
+            {[...(rounds ?? [])].reverse().map((r) => <option key={r.id} value={r.id}>Tour {r.roundNumber}</option>)}
+          </select>
+          <Input list="rnd-modes" value={maMode} onChange={(e) => setMaMode(e.target.value)} placeholder="Mode" className="w-40 h-9" />
+          <Input list="rnd-maps" value={maMap} onChange={(e) => setMaMap(e.target.value)} placeholder="Map" className="w-40 h-9" />
+          <Button size="sm" disabled={maA.length === 0 || maB.length === 0 || addMatch.isPending} onClick={() => addMatch.mutate()}>
+            Créer l'affrontement
+          </Button>
+        </div>
+      </Card>
 
       {/* Tirage */}
       <Card className="p-4 mb-6">
@@ -232,6 +290,32 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
           </div>
         </Card>
       ))}
+    </div>
+  );
+}
+
+function SidePicker({ label, value, onChange, pool, exclude }: {
+  label: string; value: string[]; onChange: (v: string[]) => void; pool: PoolPlayer[]; exclude: string[];
+}) {
+  const byId = new Map(pool.map((p) => [p.playerId, p]));
+  const taken = new Set([...value, ...exclude]);
+  const available = pool.filter((p) => !taken.has(p.playerId)).sort((a, b) => a.pseudo.localeCompare(b.pseudo));
+  return (
+    <div className="border rounded-lg p-2">
+      <div className="text-xs font-semibold text-muted-foreground mb-1.5">{label}</div>
+      <div className="flex flex-wrap gap-1.5 mb-2 min-h-[1.5rem]">
+        {value.map((id) => (
+          <span key={id} className="inline-flex items-center gap-1 text-xs bg-muted rounded px-2 py-1">
+            {byId.get(id)?.pseudo ?? "?"}
+            <button onClick={() => onChange(value.filter((x) => x !== id))}><X className="h-3 w-3" /></button>
+          </span>
+        ))}
+        {value.length === 0 && <span className="text-xs text-muted-foreground">Aucun joueur.</span>}
+      </div>
+      <select value="" onChange={(e) => { if (e.target.value) onChange([...value, e.target.value]); }} className="h-8 w-full rounded-md border bg-background px-2 text-sm" disabled={available.length === 0}>
+        <option value="">+ Ajouter un joueur</option>
+        {available.map((p) => <option key={p.playerId} value={p.playerId}>{p.pseudo}{p.poolLabel ? ` (poule ${p.poolLabel})` : ""}</option>)}
+      </select>
     </div>
   );
 }

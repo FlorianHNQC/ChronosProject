@@ -42,6 +42,36 @@ const parseTeam = (s: string): string[] => {
   try { const v = JSON.parse(s); return Array.isArray(v) ? v : []; } catch { return []; }
 };
 
+/** Forme des trios : équilibrés par Elo (serpent) ou purement aléatoires. */
+function formTrios(playerIds: string[], balance: boolean, eloOf?: Map<string, number>): string[][] {
+  if (balance && eloOf) {
+    const nbTeams = Math.floor(playerIds.length / 3);
+    const buckets: string[][] = Array.from({ length: Math.max(1, nbTeams) }, () => []);
+    const sorted = [...playerIds].sort((a, b) => (eloOf.get(b) ?? 1000) - (eloOf.get(a) ?? 1000));
+    let dir = 1, idx = 0;
+    for (const pid of sorted) {
+      if (buckets[idx].length < 3) buckets[idx].push(pid);
+      let guard = 0;
+      do {
+        idx += dir;
+        if (idx >= buckets.length) { idx = buckets.length - 1; dir = -1; }
+        else if (idx < 0) { idx = 0; dir = 1; }
+        if (++guard > buckets.length * 2) break;
+      } while (buckets[idx].length >= 3);
+    }
+    return buckets.filter((b) => b.length === 3);
+  }
+  const shuffled = shuffle(playerIds);
+  const trios: string[][] = [];
+  for (let i = 0; i + 3 <= shuffled.length; i += 3) trios.push(shuffled.slice(i, i + 3));
+  return trios;
+}
+
+async function eloMap(): Promise<Map<string, number>> {
+  const rows = await db.select({ id: players.id, elo: players.elo }).from(players);
+  return new Map(rows.map((r) => [r.id, r.elo ?? 1000]));
+}
+
 async function playerMap(): Promise<Map<string, PoolPlayer>> {
   const rows = await db.select({ id: players.id, pseudo: players.pseudo, avatarUrl: players.avatarUrl }).from(players);
   return new Map(rows.map((r) => [r.id, { playerId: r.id, pseudo: r.pseudo, avatarUrl: r.avatarUrl }]));
@@ -84,32 +114,7 @@ export const randomStore = {
       .returning();
 
     // Formation des trios : équilibrée par Elo (snake) ou purement aléatoire.
-    let trios: string[][];
-    if (opts.balanceElo) {
-      const eloRows = await db.select({ id: players.id, elo: players.elo }).from(players);
-      const eloOf = new Map(eloRows.map((r) => [r.id, r.elo ?? 1000]));
-      const nbTeams = Math.floor(playerIds.length / 3);
-      const buckets: string[][] = Array.from({ length: Math.max(1, nbTeams) }, () => []);
-      // Tri décroissant par Elo puis distribution en serpent → moyennes proches.
-      const sorted = [...playerIds].sort((a, b) => (eloOf.get(b)! - eloOf.get(a)!));
-      let dir = 1, idx = 0;
-      for (const pid of sorted) {
-        if (buckets[idx].length < 3) buckets[idx].push(pid);
-        // avance en serpent, en sautant les équipes déjà pleines
-        let guard = 0;
-        do {
-          idx += dir;
-          if (idx >= buckets.length) { idx = buckets.length - 1; dir = -1; }
-          else if (idx < 0) { idx = 0; dir = 1; }
-          if (++guard > buckets.length * 2) break;
-        } while (buckets[idx].length >= 3);
-      }
-      trios = buckets.filter((b) => b.length === 3);
-    } else {
-      const shuffled = shuffle(playerIds);
-      trios = [];
-      for (let i = 0; i + 3 <= shuffled.length; i += 3) trios.push(shuffled.slice(i, i + 3));
-    }
+    const trios = formTrios(playerIds, !!opts.balanceElo, opts.balanceElo ? await eloMap() : undefined);
 
     // Modes de jeu : commun, ou tiré au hasard par affrontement parmi l'historique.
     let modePool: string[] = [];
@@ -133,6 +138,73 @@ export const randomStore = {
       });
     }
     return (await this.listRounds(competitionId)).find((r) => r.id === round.id)!;
+  },
+
+  /** Crée un tour vide (pour composer des affrontements à la main). */
+  async createEmptyRound(competitionId: string, note?: string): Promise<string> {
+    const existing = await db.select({ n: randomRounds.roundNumber }).from(randomRounds).where(eq(randomRounds.competitionId, competitionId));
+    const roundNumber = existing.reduce((m, r) => Math.max(m, r.n), 0) + 1;
+    const [round] = await db.insert(randomRounds).values({ competitionId, roundNumber, note: note || null }).returning();
+    return round.id;
+  },
+
+  /**
+   * Crée un affrontement en choisissant directement les joueurs des deux camps —
+   * SANS équipe persistante. Si roundId absent, crée un tour « manuel ».
+   */
+  async addManualMatch(
+    competitionId: string,
+    data: { roundId?: string; teamA: string[]; teamB: string[]; gameMode?: string; map?: string },
+  ): Promise<RoundView> {
+    const roundId = data.roundId || (await this.createEmptyRound(competitionId, "Manuel"));
+    await db.insert(randomMatches).values({
+      roundId,
+      competitionId,
+      teamA: JSON.stringify(data.teamA),
+      teamB: JSON.stringify(data.teamB),
+      gameMode: data.gameMode || null,
+      map: data.map || null,
+    });
+    return (await this.listRounds(competitionId)).find((r) => r.id === roundId)!;
+  },
+
+  /**
+   * Publie les affrontements des poules : pour chaque poule, forme des trios et
+   * crée le round-robin (toutes les paires de trios) → chacun joue au sein de sa
+   * poule (intra). En mode « inter », tire globalement en mélangeant les poules.
+   */
+  async generatePoules(competitionId: string, opts: { scope?: "intra" | "inter"; balanceElo?: boolean } = {}): Promise<RoundView> {
+    const parts = await this.listParticipants(competitionId);
+    const elos = opts.balanceElo ? await eloMap() : undefined;
+    const roundId = await this.createEmptyRound(competitionId, opts.scope === "inter" ? "Poules — inter" : "Poules — intra");
+
+    const makeMatchups = async (ids: string[]) => {
+      const trios = formTrios(ids, !!opts.balanceElo, elos);
+      // Round-robin : toutes les paires de trios de ce groupe.
+      for (let i = 0; i < trios.length; i++) {
+        for (let j = i + 1; j < trios.length; j++) {
+          await db.insert(randomMatches).values({
+            roundId, competitionId,
+            teamA: JSON.stringify(trios[i]),
+            teamB: JSON.stringify(trios[j]),
+          });
+        }
+      }
+    };
+
+    if (opts.scope === "inter") {
+      await makeMatchups(parts.map((p) => p.playerId));
+    } else {
+      const byPoule = new Map<string, string[]>();
+      for (const p of parts) {
+        const key = (p.poolLabel ?? "").trim();
+        if (!key) continue;
+        if (!byPoule.has(key)) byPoule.set(key, []);
+        byPoule.get(key)!.push(p.playerId);
+      }
+      for (const ids of Array.from(byPoule.values())) await makeMatchups(ids);
+    }
+    return (await this.listRounds(competitionId)).find((r) => r.id === roundId)!;
   },
 
   async listRounds(competitionId: string): Promise<RoundView[]> {

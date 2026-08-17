@@ -67,6 +67,37 @@ export function registerRandomRoutes(app: Express) {
     }
   });
 
+  // Affrontement composé à la main (sans équipe persistante).
+  app.post("/api/random/:cid/matches", async (req, res, next) => {
+    try {
+      const teamA: string[] = Array.isArray(req.body?.teamA) ? req.body.teamA : [];
+      const teamB: string[] = Array.isArray(req.body?.teamB) ? req.body.teamB : [];
+      if (teamA.length === 0 || teamB.length === 0) {
+        return res.status(400).json({ message: "Sélectionne au moins un joueur de chaque côté." });
+      }
+      const round = await randomStore.addManualMatch(req.params.cid, {
+        roundId: req.body?.roundId || undefined,
+        teamA, teamB,
+        gameMode: req.body?.gameMode,
+        map: req.body?.map,
+      });
+      res.json(round);
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Publie les affrontements des poules (round-robin intra, ou tirage inter).
+  app.post("/api/random/:cid/generate-poules", async (req, res, next) => {
+    try {
+      const scope = req.body?.scope === "inter" ? "inter" : "intra";
+      const round = await randomStore.generatePoules(req.params.cid, { scope, balanceElo: !!req.body?.balanceElo });
+      res.json(round);
+    } catch (e) {
+      next(e);
+    }
+  });
+
   app.delete("/api/random/:cid/rounds/:roundId", async (req, res, next) => {
     try {
       await randomStore.deleteRound(req.params.roundId);
