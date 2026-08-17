@@ -65,12 +65,13 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
   const [bans, setBans] = useState("");
   const [balanceElo, setBalanceElo] = useState(false);
   const [randomMode, setRandomMode] = useState(false);
+  const [drawScope, setDrawScope] = useState<"intra" | "inter">("intra");
   useEffect(() => { setPresent(new Set((pool ?? []).map((p) => p.playerId))); }, [pool]);
   const toggle = (id: string) => setPresent((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const draw = useMutation({
     mutationFn: () => apiRequest("POST", `/api/random/${cid}/rounds`, {
-      playerIds: Array.from(present), gameMode, bans, balanceElo, randomMode,
+      playerIds: Array.from(present), gameMode, bans, balanceElo, randomMode, pouleScope: drawScope,
     }),
     onSuccess: () => { setGameMode(""); setBans(""); invalidate(); toast({ title: "Tour tiré" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
@@ -216,6 +217,11 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mb-2">
+          <select value={drawScope} onChange={(e) => setDrawScope(e.target.value as "intra" | "inter")}
+            className="h-8 rounded-md border bg-background px-2 text-xs" title="Intra : on ne mélange jamais deux poules. Inter : tirage global toutes poules confondues.">
+            <option value="intra">Intra-poule (pas de mélange)</option>
+            <option value="inter">Inter-poules (global)</option>
+          </select>
           <button onClick={() => setBalanceElo((v) => !v)}
             className={"inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded border " + (balanceElo ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground")}
             title="Former des trios de moyenne d'Elo proche (équilibrage approximatif)">

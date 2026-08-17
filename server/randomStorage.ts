@@ -27,7 +27,7 @@ export type RoundView = {
   note: string | null;
   matches: MatchView[];
 };
-export type DrawOpts = { gameMode?: string; bans?: string; balanceElo?: boolean; randomMode?: boolean };
+export type DrawOpts = { gameMode?: string; bans?: string; balanceElo?: boolean; randomMode?: boolean; pouleScope?: "intra" | "inter" };
 export type LeaderRow = { playerId: string; pseudo: string; avatarUrl: string | null; played: number; wins: number; losses: number; gamesWon: number; gamesLost: number };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -113,8 +113,25 @@ export const randomStore = {
       .values({ competitionId, roundNumber, gameMode: opts.gameMode || null, bans: opts.bans || null })
       .returning();
 
-    // Formation des trios : équilibrée par Elo (snake) ou purement aléatoire.
-    const trios = formTrios(playerIds, !!opts.balanceElo, opts.balanceElo ? await eloMap() : undefined);
+    const elos = opts.balanceElo ? await eloMap() : undefined;
+
+    // Découpage en groupes : en INTRA, on ne mélange JAMAIS deux poules (chaque
+    // poule est tirée séparément). En INTER (défaut historique), tout le monde
+    // ensemble.
+    let groups: string[][];
+    if (opts.pouleScope === "intra") {
+      const parts = await this.listParticipants(competitionId);
+      const pouleOf = new Map(parts.map((p) => [p.playerId, (p.poolLabel ?? "").trim()]));
+      const by = new Map<string, string[]>();
+      for (const id of playerIds) {
+        const key = pouleOf.get(id) ?? "";
+        if (!by.has(key)) by.set(key, []);
+        by.get(key)!.push(id);
+      }
+      groups = Array.from(by.values());
+    } else {
+      groups = [playerIds];
+    }
 
     // Modes de jeu : commun, ou tiré au hasard par affrontement parmi l'historique.
     let modePool: string[] = [];
@@ -127,15 +144,18 @@ export const randomStore = {
       return opts.gameMode || null;
     };
 
-    // Apparie les trios deux par deux (un trio en trop = repos).
-    for (let i = 0; i + 2 <= trios.length; i += 2) {
-      await db.insert(randomMatches).values({
-        roundId: round.id,
-        competitionId,
-        teamA: JSON.stringify(trios[i]),
-        teamB: JSON.stringify(trios[i + 1]),
-        gameMode: pickMode(),
-      });
+    // Pour chaque groupe : trios (aléatoires ou équilibrés) appariés deux par deux.
+    for (const g of groups) {
+      const trios = formTrios(g, !!opts.balanceElo, elos);
+      for (let i = 0; i + 2 <= trios.length; i += 2) {
+        await db.insert(randomMatches).values({
+          roundId: round.id,
+          competitionId,
+          teamA: JSON.stringify(trios[i]),
+          teamB: JSON.stringify(trios[i + 1]),
+          gameMode: pickMode(),
+        });
+      }
     }
     return (await this.listRounds(competitionId)).find((r) => r.id === round.id)!;
   },

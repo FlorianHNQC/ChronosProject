@@ -60,6 +60,7 @@ export function registerRandomRoutes(app: Express) {
         bans: req.body?.bans,
         balanceElo: !!req.body?.balanceElo,
         randomMode: !!req.body?.randomMode,
+        pouleScope: req.body?.pouleScope === "inter" ? "inter" : "intra",
       });
       res.json(round);
     } catch (e) {
