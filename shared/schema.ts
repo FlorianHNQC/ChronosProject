@@ -439,6 +439,10 @@ export const randomMatches = pgTable("random_matches", {
   scoreA: integer("score_a").default(0),
   scoreB: integer("score_b").default(0),
   winner: text("winner"), // "a" | "b" | null
+  // Mode de jeu propre à l'affrontement (peut différer d'un match à l'autre) et
+  // map choisie une fois les affrontements définis.
+  gameMode: text("game_mode"),
+  map: text("map"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

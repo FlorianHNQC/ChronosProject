@@ -5,21 +5,27 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Shuffle, X, Trophy } from "lucide-react";
+import { Shuffle, X, Trophy, Trash2, Scale } from "lucide-react";
 import type { Player } from "@shared/schema";
 
 type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null };
-type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null };
+type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null };
 type RoundView = { id: string; roundNumber: number; gameMode: string | null; bans: string | null; note: string | null; matches: MatchView[] };
 type LeaderRow = { playerId: string; pseudo: string; avatarUrl: string | null; played: number; wins: number; losses: number; gamesWon: number; gamesLost: number };
+type Suggestions = { modes: string[]; maps: string[] };
 
 /**
- * Panneau tournoi à équipes aléatoires : pool, tirage 3v3 par tour, classement
- * individuel. Réutilisé par « Tournoi aléatoire » et par la page de gestion.
+ * Panneau tournoi à équipes aléatoires : pool, tirage 3v3 par tour (aléatoire ou
+ * équilibré par Elo), mode par affrontement (commun ou tiré au hasard), maps
+ * choisies après coup, classement individuel. Non lié à l'Elo.
  */
 export function RandomTournamentPanel({ competitionId: cid }: { competitionId: string }) {
   const { toast } = useToast();
   const { data: allPlayers } = useQuery<Player[]>({ queryKey: ["/api/players"] });
+  const { data: suggestions } = useQuery<Suggestions>({
+    queryKey: ["/api/random/suggestions"],
+    queryFn: async () => (await apiRequest("GET", "/api/random/suggestions")).json(),
+  });
 
   const get = <T,>(path: string) => ({
     queryKey: ["/api/random", cid, path],
@@ -34,6 +40,7 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
     queryClient.invalidateQueries({ queryKey: ["/api/random", cid, "participants"] });
     queryClient.invalidateQueries({ queryKey: ["/api/random", cid, "rounds"] });
     queryClient.invalidateQueries({ queryKey: ["/api/random", cid, "leaderboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/random/suggestions"] });
   };
 
   const [addId, setAddId] = useState("");
@@ -50,11 +57,15 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
   const [present, setPresent] = useState<Set<string>>(new Set());
   const [gameMode, setGameMode] = useState("");
   const [bans, setBans] = useState("");
+  const [balanceElo, setBalanceElo] = useState(false);
+  const [randomMode, setRandomMode] = useState(false);
   useEffect(() => { setPresent(new Set((pool ?? []).map((p) => p.playerId))); }, [pool]);
   const toggle = (id: string) => setPresent((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const draw = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/random/${cid}/rounds`, { playerIds: Array.from(present), gameMode, bans }),
+    mutationFn: () => apiRequest("POST", `/api/random/${cid}/rounds`, {
+      playerIds: Array.from(present), gameMode, bans, balanceElo, randomMode,
+    }),
     onSuccess: () => { setGameMode(""); setBans(""); invalidate(); toast({ title: "Tour tiré" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
@@ -64,12 +75,29 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
     onSuccess: invalidate,
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
+  const setMeta = useMutation({
+    mutationFn: (v: { id: string; gameMode?: string; map?: string }) => apiRequest("PATCH", `/api/random/matches/${v.id}`, { gameMode: v.gameMode, map: v.map }),
+    onSuccess: () => { invalidate(); toast({ title: "Enregistré" }); },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
+  const delMatch = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/random/matches/${id}`),
+    onSuccess: () => { invalidate(); toast({ title: "Affrontement supprimé" }); },
+  });
+  const delRound = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/random/${cid}/rounds/${id}`),
+    onSuccess: () => { invalidate(); toast({ title: "Tour supprimé" }); },
+  });
 
   const poolIds = useMemo(() => new Set((pool ?? []).map((p) => p.playerId)), [pool]);
   const addable = useMemo(() => [...(allPlayers ?? [])].filter((p) => !poolIds.has(p.id)).sort((a, b) => a.pseudo.localeCompare(b.pseudo)), [allPlayers, poolIds]);
 
   return (
     <div>
+      {/* Listes d'auto-complétion partagées (modes / maps déjà saisis). */}
+      <datalist id="rnd-modes">{(suggestions?.modes ?? []).map((m) => <option key={m} value={m} />)}</datalist>
+      <datalist id="rnd-maps">{(suggestions?.maps ?? []).map((m) => <option key={m} value={m} />)}</datalist>
+
       {/* Pool */}
       <Card className="p-4 mb-6">
         <h2 className="font-semibold mb-2">Pool de joueurs ({pool?.length ?? 0})</h2>
@@ -105,8 +133,23 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
             );
           })}
         </div>
+
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <button onClick={() => setBalanceElo((v) => !v)}
+            className={"inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded border " + (balanceElo ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground")}
+            title="Former des trios de moyenne d'Elo proche (équilibrage approximatif)">
+            <Scale className="h-3.5 w-3.5" /> Équilibrer par Elo
+          </button>
+          <button onClick={() => setRandomMode((v) => !v)}
+            className={"inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded border " + (randomMode ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground")}
+            title="Chaque affrontement reçoit un mode tiré au hasard parmi les modes déjà utilisés">
+            <Shuffle className="h-3.5 w-3.5" /> Mode aléatoire par affrontement
+          </button>
+        </div>
+
         <div className="flex items-center gap-2 flex-wrap">
-          <Input value={gameMode} onChange={(e) => setGameMode(e.target.value)} placeholder="Mode du jour (ex. Gem Grab)" className="w-52 h-9" />
+          <Input list="rnd-modes" value={gameMode} onChange={(e) => setGameMode(e.target.value)}
+            placeholder={randomMode ? "(tiré au hasard)" : "Mode (ex. Gem Grab)"} className="w-52 h-9" disabled={randomMode} />
           <Input value={bans} onChange={(e) => setBans(e.target.value)} placeholder="Bans (ex. Piper, Edgar)" className="w-52 h-9" />
           <Button size="sm" disabled={present.size < 6 || draw.isPending} onClick={() => draw.mutate()}>
             <Shuffle className="h-4 w-4 mr-1" /> Tirer le tour
@@ -150,9 +193,18 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
             <h3 className="font-semibold">Tour {r.roundNumber}</h3>
             {r.gameMode && <span className="text-xs bg-muted rounded px-2 py-0.5">{r.gameMode}</span>}
             {r.bans && <span className="text-xs text-muted-foreground">Bans : {r.bans}</span>}
+            <Button size="icon" variant="ghost" className="ml-auto h-8 w-8 text-destructive" title="Supprimer le tour"
+              onClick={() => { if (confirm(`Supprimer le tour ${r.roundNumber} et ses affrontements ?`)) delRound.mutate(r.id); }}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
           <div className="space-y-2">
-            {r.matches.map((m) => <MatchRow key={m.id} m={m} onSave={(a, b) => setResult.mutate({ id: m.id, scoreA: a, scoreB: b })} />)}
+            {r.matches.map((m) => (
+              <MatchRow key={m.id} m={m}
+                onSaveScore={(a, b) => setResult.mutate({ id: m.id, scoreA: a, scoreB: b })}
+                onSaveMeta={(mode, map) => setMeta.mutate({ id: m.id, gameMode: mode, map })}
+                onDelete={() => delMatch.mutate(m.id)} />
+            ))}
             {r.matches.length === 0 && <p className="text-sm text-muted-foreground">Aucun affrontement (pas assez de joueurs).</p>}
           </div>
         </Card>
@@ -161,18 +213,37 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
   );
 }
 
-function MatchRow({ m, onSave }: { m: MatchView; onSave: (a: number, b: number) => void }) {
+function MatchRow({ m, onSaveScore, onSaveMeta, onDelete }: {
+  m: MatchView;
+  onSaveScore: (a: number, b: number) => void;
+  onSaveMeta: (mode: string, map: string) => void;
+  onDelete: () => void;
+}) {
   const [a, setA] = useState(String(m.scoreA));
   const [b, setB] = useState(String(m.scoreB));
+  const [mode, setMode] = useState(m.gameMode ?? "");
+  const [map, setMap] = useState(m.map ?? "");
   const names = (t: PoolPlayer[]) => t.map((p) => p.pseudo).join(" · ");
   return (
-    <div className="flex items-center gap-2 flex-wrap border rounded-lg p-2">
-      <span className={"flex-1 text-sm text-right truncate " + (m.winner === "a" ? "font-bold" : "")}>{names(m.teamA)}</span>
-      <Input type="number" value={a} onChange={(e) => setA(e.target.value)} className="w-14 h-8 text-center" />
-      <span className="text-muted-foreground">–</span>
-      <Input type="number" value={b} onChange={(e) => setB(e.target.value)} className="w-14 h-8 text-center" />
-      <span className={"flex-1 text-sm truncate " + (m.winner === "b" ? "font-bold" : "")}>{names(m.teamB)}</span>
-      <Button size="sm" variant="outline" onClick={() => onSave(Number(a) || 0, Number(b) || 0)}>OK</Button>
+    <div className="border rounded-lg p-2 space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={"flex-1 text-sm text-right truncate " + (m.winner === "a" ? "font-bold" : "")}>{names(m.teamA)}</span>
+        <Input type="number" value={a} onChange={(e) => setA(e.target.value)} className="w-14 h-8 text-center" />
+        <span className="text-muted-foreground">–</span>
+        <Input type="number" value={b} onChange={(e) => setB(e.target.value)} className="w-14 h-8 text-center" />
+        <span className={"flex-1 text-sm truncate " + (m.winner === "b" ? "font-bold" : "")}>{names(m.teamB)}</span>
+        <Button size="sm" variant="outline" onClick={() => onSaveScore(Number(a) || 0, Number(b) || 0)}>OK</Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Supprimer l'affrontement" onClick={onDelete}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground">Mode</span>
+        <Input list="rnd-modes" value={mode} onChange={(e) => setMode(e.target.value)} placeholder="ex. Gem Grab" className="w-40 h-8" />
+        <span className="text-xs text-muted-foreground">Map</span>
+        <Input list="rnd-maps" value={map} onChange={(e) => setMap(e.target.value)} placeholder="ex. Hard Rock Mine" className="w-44 h-8" />
+        <Button size="sm" variant="outline" onClick={() => onSaveMeta(mode, map)}>Enregistrer</Button>
+      </div>
     </div>
   );
 }

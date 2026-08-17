@@ -46,8 +46,22 @@ export function registerRandomRoutes(app: Express) {
     try {
       const playerIds: string[] = Array.isArray(req.body?.playerIds) ? req.body.playerIds : [];
       if (playerIds.length < 6) return res.status(400).json({ message: "Au moins 6 joueurs présents pour former un affrontement 3v3." });
-      const round = await randomStore.drawRound(req.params.cid, playerIds, req.body?.gameMode, req.body?.bans);
+      const round = await randomStore.drawRound(req.params.cid, playerIds, {
+        gameMode: req.body?.gameMode,
+        bans: req.body?.bans,
+        balanceElo: !!req.body?.balanceElo,
+        randomMode: !!req.body?.randomMode,
+      });
       res.json(round);
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  app.delete("/api/random/:cid/rounds/:roundId", async (req, res, next) => {
+    try {
+      await randomStore.deleteRound(req.params.roundId);
+      res.json({ ok: true });
     } catch (e) {
       next(e);
     }
@@ -55,11 +69,34 @@ export function registerRandomRoutes(app: Express) {
 
   app.patch("/api/random/matches/:id", async (req, res, next) => {
     try {
-      const scoreA = Number(req.body?.scoreA) || 0;
-      const scoreB = Number(req.body?.scoreB) || 0;
-      const updated = await randomStore.setMatchResult(req.params.id, scoreA, scoreB);
-      if (!updated) return res.status(404).json({ message: "Match introuvable." });
-      res.json(updated);
+      const b = req.body ?? {};
+      // Métadonnées (mode/map) et/ou résultat.
+      if (b.gameMode !== undefined || b.map !== undefined) {
+        await randomStore.setMatchMeta(req.params.id, { gameMode: b.gameMode, map: b.map });
+      }
+      if (b.scoreA !== undefined || b.scoreB !== undefined) {
+        const updated = await randomStore.setMatchResult(req.params.id, Number(b.scoreA) || 0, Number(b.scoreB) || 0);
+        if (!updated) return res.status(404).json({ message: "Match introuvable." });
+        return res.json(updated);
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  app.delete("/api/random/matches/:id", async (req, res, next) => {
+    try {
+      await randomStore.deleteMatch(req.params.id);
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  app.get("/api/random/suggestions", async (_req, res, next) => {
+    try {
+      res.json(await randomStore.suggestions());
     } catch (e) {
       next(e);
     }

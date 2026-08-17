@@ -16,6 +16,8 @@ export type MatchView = {
   scoreA: number;
   scoreB: number;
   winner: string | null;
+  gameMode: string | null;
+  map: string | null;
 };
 export type RoundView = {
   id: string;
@@ -25,6 +27,7 @@ export type RoundView = {
   note: string | null;
   matches: MatchView[];
 };
+export type DrawOpts = { gameMode?: string; bans?: string; balanceElo?: boolean; randomMode?: boolean };
 export type LeaderRow = { playerId: string; pseudo: string; avatarUrl: string | null; played: number; wins: number; losses: number; gamesWon: number; gamesLost: number };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -61,19 +64,59 @@ export const randomStore = {
     await db.delete(randomParticipants).where(and(eq(randomParticipants.competitionId, competitionId), eq(randomParticipants.playerId, playerId)));
   },
 
-  /** Tire un nouveau tour : mélange les joueurs présents en trios et les apparie. */
-  async drawRound(competitionId: string, playerIds: string[], gameMode?: string, bans?: string): Promise<RoundView> {
+  /**
+   * Tire un nouveau tour : forme des trios (aléatoires ou équilibrés par Elo) et
+   * les apparie en affrontements 3v3. Le mode peut être commun, ou tiré au hasard
+   * par affrontement (randomMode) parmi les modes déjà utilisés.
+   */
+  async drawRound(competitionId: string, playerIds: string[], opts: DrawOpts = {}): Promise<RoundView> {
     const existing = await db.select({ n: randomRounds.roundNumber }).from(randomRounds).where(eq(randomRounds.competitionId, competitionId));
     const roundNumber = existing.reduce((m, r) => Math.max(m, r.n), 0) + 1;
 
     const [round] = await db
       .insert(randomRounds)
-      .values({ competitionId, roundNumber, gameMode: gameMode || null, bans: bans || null })
+      .values({ competitionId, roundNumber, gameMode: opts.gameMode || null, bans: opts.bans || null })
       .returning();
 
-    const shuffled = shuffle(playerIds);
-    const trios: string[][] = [];
-    for (let i = 0; i + 3 <= shuffled.length; i += 3) trios.push(shuffled.slice(i, i + 3));
+    // Formation des trios : équilibrée par Elo (snake) ou purement aléatoire.
+    let trios: string[][];
+    if (opts.balanceElo) {
+      const eloRows = await db.select({ id: players.id, elo: players.elo }).from(players);
+      const eloOf = new Map(eloRows.map((r) => [r.id, r.elo ?? 1000]));
+      const nbTeams = Math.floor(playerIds.length / 3);
+      const buckets: string[][] = Array.from({ length: Math.max(1, nbTeams) }, () => []);
+      // Tri décroissant par Elo puis distribution en serpent → moyennes proches.
+      const sorted = [...playerIds].sort((a, b) => (eloOf.get(b)! - eloOf.get(a)!));
+      let dir = 1, idx = 0;
+      for (const pid of sorted) {
+        if (buckets[idx].length < 3) buckets[idx].push(pid);
+        // avance en serpent, en sautant les équipes déjà pleines
+        let guard = 0;
+        do {
+          idx += dir;
+          if (idx >= buckets.length) { idx = buckets.length - 1; dir = -1; }
+          else if (idx < 0) { idx = 0; dir = 1; }
+          if (++guard > buckets.length * 2) break;
+        } while (buckets[idx].length >= 3);
+      }
+      trios = buckets.filter((b) => b.length === 3);
+    } else {
+      const shuffled = shuffle(playerIds);
+      trios = [];
+      for (let i = 0; i + 3 <= shuffled.length; i += 3) trios.push(shuffled.slice(i, i + 3));
+    }
+
+    // Modes de jeu : commun, ou tiré au hasard par affrontement parmi l'historique.
+    let modePool: string[] = [];
+    if (opts.randomMode) {
+      const s = await this.suggestions();
+      modePool = s.modes;
+    }
+    const pickMode = (): string | null => {
+      if (opts.randomMode && modePool.length > 0) return modePool[Math.floor(Math.random() * modePool.length)];
+      return opts.gameMode || null;
+    };
+
     // Apparie les trios deux par deux (un trio en trop = repos).
     for (let i = 0; i + 2 <= trios.length; i += 2) {
       await db.insert(randomMatches).values({
@@ -81,6 +124,7 @@ export const randomStore = {
         competitionId,
         teamA: JSON.stringify(trios[i]),
         teamB: JSON.stringify(trios[i + 1]),
+        gameMode: pickMode(),
       });
     }
     return (await this.listRounds(competitionId)).find((r) => r.id === round.id)!;
@@ -102,6 +146,8 @@ export const randomStore = {
         scoreA: m.scoreA ?? 0,
         scoreB: m.scoreB ?? 0,
         winner: m.winner,
+        gameMode: m.gameMode ?? null,
+        map: m.map ?? null,
       });
     }
     return rounds.map((r) => ({
@@ -118,6 +164,39 @@ export const randomStore = {
     const winner = scoreA === scoreB ? null : scoreA > scoreB ? "a" : "b";
     const [row] = await db.update(randomMatches).set({ scoreA, scoreB, winner }).where(eq(randomMatches.id, matchId)).returning();
     return row;
+  },
+
+  /** Mode/map d'un affrontement (le mode peut varier ; la map se choisit après le tirage). */
+  async setMatchMeta(matchId: string, meta: { gameMode?: string | null; map?: string | null }): Promise<RandomMatch | undefined> {
+    const patch: Record<string, unknown> = {};
+    if (meta.gameMode !== undefined) patch.gameMode = meta.gameMode || null;
+    if (meta.map !== undefined) patch.map = meta.map || null;
+    if (Object.keys(patch).length === 0) return undefined;
+    const [row] = await db.update(randomMatches).set(patch).where(eq(randomMatches.id, matchId)).returning();
+    return row;
+  },
+
+  /** Suppressions pour ajustement (même après création). */
+  async deleteMatch(matchId: string): Promise<void> {
+    await db.delete(randomMatches).where(eq(randomMatches.id, matchId));
+  },
+  async deleteRound(roundId: string): Promise<void> {
+    await db.delete(randomMatches).where(eq(randomMatches.roundId, roundId));
+    await db.delete(randomRounds).where(eq(randomRounds.id, roundId));
+  },
+
+  /** Modes et maps déjà saisis (toutes compétitions) → auto-complétion. */
+  async suggestions(): Promise<{ modes: string[]; maps: string[] }> {
+    const roundModes = await db.select({ gameMode: randomRounds.gameMode }).from(randomRounds);
+    const matchRows = await db.select({ gameMode: randomMatches.gameMode, map: randomMatches.map }).from(randomMatches);
+    const modes = new Set<string>();
+    const maps = new Set<string>();
+    for (const r of roundModes) if (r.gameMode) modes.add(r.gameMode);
+    for (const m of matchRows) { if (m.gameMode) modes.add(m.gameMode); if (m.map) maps.add(m.map); }
+    return {
+      modes: Array.from(modes).sort((a, b) => a.localeCompare(b)),
+      maps: Array.from(maps).sort((a, b) => a.localeCompare(b)),
+    };
   },
 
   async leaderboard(competitionId: string): Promise<LeaderRow[]> {
