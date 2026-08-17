@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
-import { Trophy } from "lucide-react";
+import { Trophy, LayoutGrid } from "lucide-react";
+import { PlayerPoules } from "@/components/player-poules";
 
-type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null };
+type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
 type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null };
 type RoundView = { id: string; roundNumber: number; gameMode: string | null; bans: string | null; note: string | null; matches: MatchView[] };
 type LeaderRow = { playerId: string; pseudo: string; avatarUrl: string | null; played: number; wins: number; losses: number; gamesWon: number; gamesLost: number };
@@ -18,11 +19,22 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
     queryKey: ["/api/random", competitionId, "leaderboard"],
     queryFn: async () => (await apiRequest("GET", `/api/random/${competitionId}/leaderboard`)).json(),
   });
+  const { data: participants } = useQuery<PoolPlayer[]>({
+    queryKey: ["/api/random", competitionId, "participants"],
+    queryFn: async () => (await apiRequest("GET", `/api/random/${competitionId}/participants`)).json(),
+  });
 
   const names = (t: PoolPlayer[]) => t.map((p) => p.pseudo).join(" · ");
+  const hasPoules = (participants ?? []).some((p) => (p.poolLabel ?? "").trim());
 
   return (
     <div className="space-y-8">
+      {hasPoules && (
+        <div>
+          <h3 className="font-semibold mb-3 flex items-center gap-2"><LayoutGrid className="h-5 w-5 text-primary" /> Poules</h3>
+          <PlayerPoules entrants={participants ?? []} records={board ?? []} />
+        </div>
+      )}
       <div>
         <h3 className="font-semibold mb-3 flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /> Classement individuel</h3>
         {(board ?? []).length === 0 ? (

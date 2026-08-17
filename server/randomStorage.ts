@@ -8,7 +8,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "./db";
 import { randomParticipants, randomRounds, randomMatches, players, type RandomMatch } from "@shared/schema";
 
-export type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null };
+export type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
 export type MatchView = {
   id: string;
   teamA: PoolPlayer[];
@@ -50,11 +50,11 @@ async function playerMap(): Promise<Map<string, PoolPlayer>> {
 export const randomStore = {
   async listParticipants(competitionId: string): Promise<PoolPlayer[]> {
     const rows = await db
-      .select({ playerId: randomParticipants.playerId, pseudo: players.pseudo, avatarUrl: players.avatarUrl })
+      .select({ playerId: randomParticipants.playerId, pseudo: players.pseudo, avatarUrl: players.avatarUrl, poolLabel: randomParticipants.poolLabel })
       .from(randomParticipants)
       .leftJoin(players, eq(randomParticipants.playerId, players.id))
       .where(eq(randomParticipants.competitionId, competitionId));
-    return rows.map((r) => ({ playerId: r.playerId, pseudo: r.pseudo ?? "?", avatarUrl: r.avatarUrl ?? null }));
+    return rows.map((r) => ({ playerId: r.playerId, pseudo: r.pseudo ?? "?", avatarUrl: r.avatarUrl ?? null, poolLabel: r.poolLabel ?? null }));
   },
 
   async addParticipant(competitionId: string, playerId: string): Promise<void> {
@@ -62,6 +62,11 @@ export const randomStore = {
   },
   async removeParticipant(competitionId: string, playerId: string): Promise<void> {
     await db.delete(randomParticipants).where(and(eq(randomParticipants.competitionId, competitionId), eq(randomParticipants.playerId, playerId)));
+  },
+  /** Affecte (ou retire) la poule d'un participant. */
+  async setParticipantPool(competitionId: string, playerId: string, poolLabel: string | null): Promise<void> {
+    await db.update(randomParticipants).set({ poolLabel: poolLabel || null })
+      .where(and(eq(randomParticipants.competitionId, competitionId), eq(randomParticipants.playerId, playerId)));
   },
 
   /**

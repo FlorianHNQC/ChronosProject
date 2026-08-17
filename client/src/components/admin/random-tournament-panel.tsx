@@ -5,10 +5,11 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Shuffle, X, Trophy, Trash2, Scale, UserRound } from "lucide-react";
+import { Shuffle, X, Trophy, Trash2, Scale, UserRound, LayoutGrid } from "lucide-react";
+import { PlayerPoules } from "@/components/player-poules";
 import type { Player } from "@shared/schema";
 
-type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null };
+type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
 type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null };
 type RoundView = { id: string; roundNumber: number; gameMode: string | null; bans: string | null; note: string | null; matches: MatchView[] };
 type LeaderRow = { playerId: string; pseudo: string; avatarUrl: string | null; played: number; wins: number; losses: number; gamesWon: number; gamesLost: number };
@@ -52,6 +53,11 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
   const rmP = useMutation({
     mutationFn: (pid: string) => apiRequest("DELETE", `/api/random/${cid}/participants/${pid}`),
     onSuccess: invalidate,
+  });
+  const setPool = useMutation({
+    mutationFn: (v: { pid: string; poolLabel: string }) => apiRequest("PATCH", `/api/random/${cid}/participants/${v.pid}`, { poolLabel: v.poolLabel || null }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/random", cid, "participants"] }),
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
 
   const [present, setPresent] = useState<Set<string>>(new Set());
@@ -108,15 +114,32 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
           </select>
           <Button size="sm" disabled={!addId || addP.isPending} onClick={() => addP.mutate()}>Ajouter</Button>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-col gap-1">
           {(pool ?? []).map((p) => (
-            <span key={p.playerId} className="inline-flex items-center gap-1 text-xs bg-muted rounded px-2 py-1">
-              {p.pseudo}
-              <button onClick={() => rmP.mutate(p.playerId)}><X className="h-3 w-3" /></button>
-            </span>
+            <div key={p.playerId} className="flex items-center gap-2 text-sm border rounded px-2 py-1">
+              <span className="flex-1 truncate">{p.pseudo}</span>
+              <span className="text-xs text-muted-foreground">Poule</span>
+              <Input
+                defaultValue={p.poolLabel ?? ""}
+                placeholder="—"
+                className="w-14 h-7 text-center"
+                onBlur={(e) => { if ((p.poolLabel ?? "") !== e.target.value.trim()) setPool.mutate({ pid: p.playerId, poolLabel: e.target.value.trim() }); }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              />
+              <button onClick={() => rmP.mutate(p.playerId)} title="Retirer du pool"><X className="h-3.5 w-3.5 text-muted-foreground" /></button>
+            </div>
           ))}
+          {(pool ?? []).length === 0 && <span className="text-xs text-muted-foreground">Pool vide.</span>}
         </div>
       </Card>
+
+      {/* Poules de joueurs */}
+      {(pool ?? []).some((p) => (p.poolLabel ?? "").trim()) && (
+        <Card className="p-4 mb-6">
+          <h2 className="font-semibold mb-3 flex items-center gap-2"><LayoutGrid className="h-4 w-4 text-primary" /> Poules</h2>
+          <PlayerPoules entrants={pool ?? []} records={board ?? []} />
+        </Card>
+      )}
 
       {/* Tirage */}
       <Card className="p-4 mb-6">

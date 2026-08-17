@@ -417,6 +417,8 @@ export const randomParticipants = pgTable("random_participants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   competitionId: varchar("competition_id").references(() => competitions.id).notNull(),
   playerId: varchar("player_id").references(() => players.id).notNull(),
+  // Poule (round-robin) du joueur dans un tournoi solo/aléatoire. Libellé libre.
+  poolLabel: text("pool_label"),
 }, (t) => ({
   uniq: uniqueIndex("random_participants_idx").on(t.competitionId, t.playerId),
 }));

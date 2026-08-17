@@ -34,6 +34,15 @@ export function registerRandomRoutes(app: Express) {
     }
   });
 
+  app.patch("/api/random/:cid/participants/:playerId", async (req, res, next) => {
+    try {
+      await randomStore.setParticipantPool(req.params.cid, req.params.playerId, req.body?.poolLabel ?? null);
+      res.json(await randomStore.listParticipants(req.params.cid));
+    } catch (e) {
+      next(e);
+    }
+  });
+
   app.get("/api/random/:cid/rounds", async (req, res, next) => {
     try {
       res.json(await randomStore.listRounds(req.params.cid));
