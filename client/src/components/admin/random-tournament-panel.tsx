@@ -8,10 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Shuffle, X, Trash2, Scale, UserRound, LayoutGrid } from "lucide-react";
 import { PlayerPoules } from "@/components/player-poules";
 import { ImageSelect, type ImageOption } from "@/components/image-select";
+import { useBsCatalog, MetaBadges } from "@/lib/bs-catalog";
 import type { Player } from "@shared/schema";
-
-type BsMode = { id: number | null; name: string; imageUrl: string | null; color: string | null };
-type BsMap = { id: number | null; name: string; imageUrl: string | null; mode: string | null; modeImageUrl: string | null; modeColor: string | null };
 
 type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
 type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null };
@@ -31,31 +29,18 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
     queryKey: ["/api/random/suggestions"],
     queryFn: async () => (await apiRequest("GET", "/api/random/suggestions")).json(),
   });
-  const { data: bsModes } = useQuery<BsMode[]>({
-    queryKey: ["/api/bs/gamemodes"],
-    queryFn: async () => (await apiRequest("GET", "/api/bs/gamemodes")).json(),
-    staleTime: 60 * 60 * 1000,
-  });
-  const { data: bsMaps } = useQuery<BsMap[]>({
-    queryKey: ["/api/bs/maps"],
-    queryFn: async () => (await apiRequest("GET", "/api/bs/maps")).json(),
-    staleTime: 60 * 60 * 1000,
-  });
-  // Options visuelles : catalogue Brawlify + entrées déjà saisies (repli).
+  const { modeOptions: catModes, mapOptions: catMaps } = useBsCatalog();
+  // Options : catalogue Brawlify + entrées déjà saisies (repli).
   const modeOptions: ImageOption[] = useMemo(() => {
-    const seen = new Set<string>();
-    const out: ImageOption[] = [];
-    for (const m of bsModes ?? []) { if (!seen.has(m.name)) { seen.add(m.name); out.push({ value: m.name, label: m.name, imageUrl: m.imageUrl, color: m.color }); } }
-    for (const s of suggestions?.modes ?? []) { if (!seen.has(s)) { seen.add(s); out.push({ value: s, label: s }); } }
-    return out;
-  }, [bsModes, suggestions]);
+    const seen = new Set(catModes.map((o) => o.value));
+    const extra = (suggestions?.modes ?? []).filter((s) => !seen.has(s)).map((s) => ({ value: s, label: s }));
+    return [...catModes, ...extra];
+  }, [catModes, suggestions]);
   const mapOptions: ImageOption[] = useMemo(() => {
-    const seen = new Set<string>();
-    const out: ImageOption[] = [];
-    for (const m of bsMaps ?? []) { if (!seen.has(m.name)) { seen.add(m.name); out.push({ value: m.name, label: m.name, imageUrl: m.imageUrl, sub: m.mode, subImageUrl: m.modeImageUrl }); } }
-    for (const s of suggestions?.maps ?? []) { if (!seen.has(s)) { seen.add(s); out.push({ value: s, label: s }); } }
-    return out;
-  }, [bsMaps, suggestions]);
+    const seen = new Set(catMaps.map((o) => o.value));
+    const extra = (suggestions?.maps ?? []).filter((s) => !seen.has(s)).map((s) => ({ value: s, label: s }));
+    return [...catMaps, ...extra];
+  }, [catMaps, suggestions]);
 
   const get = <T,>(path: string) => ({
     queryKey: ["/api/random", cid, path],
@@ -360,10 +345,7 @@ function MatchRow({ m, onSaveScore, onSaveMeta, onDelete, modeOptions, mapOption
   return (
     <div className="border rounded-lg p-3 space-y-2 bg-background/40">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {m.gameMode && <span className="px-1.5 py-0.5 rounded bg-muted">{m.gameMode}</span>}
-          {m.map && <span className="px-1.5 py-0.5 rounded bg-muted">{m.map}</span>}
-        </div>
+        <MetaBadges gameMode={m.gameMode} map={m.map} />
         <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Supprimer l'affrontement" onClick={onDelete}>
           <Trash2 className="h-4 w-4" />
         </Button>

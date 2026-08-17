@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
+import { ImageSelect } from "@/components/image-select";
+import { useBsCatalog, MetaBadges } from "@/lib/bs-catalog";
 import type { Competition, Match, Team } from "@shared/schema";
 
 const MATCH_TYPES = [
@@ -59,6 +61,7 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
   }, [teams]);
 
   const { toast } = useToast();
+  const { modeOptions, mapOptions } = useBsCatalog();
   const useConferences = distinctConferences(teams ?? []) >= 2;
   const labelA = useConferences ? "Domicile…" : "Équipe A…";
   const labelB = useConferences ? "Extérieur…" : "Équipe B…";
@@ -70,6 +73,8 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
   const [numGames, setNumGames] = useState("3");
   const [roundsPerGame, setRoundsPerGame] = useState("3");
   const [modifier, setModifier] = useState("");
+  const [gameMode, setGameMode] = useState("");
+  const [map, setMap] = useState("");
 
   const create = useMutation({
     mutationFn: () => apiRequest("POST", "/api/matches", {
@@ -79,9 +84,11 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
       numGames: Number(numGames) || 1,
       roundsPerGame: Number(roundsPerGame) || 1,
       modifier: modifier || null,
+      gameMode: gameMode || null,
+      map: map || null,
     }),
     onSuccess: () => {
-      setHome(""); setAway(""); setDatetime(""); setModifier("");
+      setHome(""); setAway(""); setDatetime(""); setModifier(""); setGameMode(""); setMap("");
       queryClient.invalidateQueries({ queryKey: ["/api/matches", competitionId] });
       toast({ title: "Match créé" });
     },
@@ -111,6 +118,10 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
             <Input type="number" min={1} value={numGames} onChange={(e) => setNumGames(e.target.value)} className="w-20 h-9 mt-0.5" /></label>
           <label className="text-xs text-muted-foreground">Manches / affr.
             <Input type="number" min={1} value={roundsPerGame} onChange={(e) => setRoundsPerGame(e.target.value)} className="w-20 h-9 mt-0.5" /></label>
+          <label className="text-xs text-muted-foreground">Mode
+            <div className="w-40 mt-0.5"><ImageSelect value={gameMode} onChange={setGameMode} options={modeOptions} placeholder="Mode" /></div></label>
+          <label className="text-xs text-muted-foreground">Map
+            <div className="w-44 mt-0.5"><ImageSelect value={map} onChange={setMap} options={mapOptions} placeholder="Map" /></div></label>
           <label className="text-xs text-muted-foreground">Modificateurs
             <Input value={modifier} onChange={(e) => setModifier(e.target.value)} placeholder="ex. sans Gadget" className="w-44 h-9 mt-0.5" /></label>
           <label className="text-xs text-muted-foreground">Date &amp; heure
@@ -123,7 +134,7 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
 
       <div className="space-y-2">
         {(matches ?? []).map((m) => (
-          <MatchRow key={m.id} match={m} competitionId={competitionId} homeName={teamName(m.teamHomeId)} awayName={teamName(m.teamAwayId)} manualPoints={manualPoints} />
+          <MatchRow key={m.id} match={m} competitionId={competitionId} homeName={teamName(m.teamHomeId)} awayName={teamName(m.teamAwayId)} manualPoints={manualPoints} modeOptions={modeOptions} mapOptions={mapOptions} />
         ))}
         {(matches ?? []).length === 0 && <p className="text-sm text-muted-foreground">Aucun match.</p>}
       </div>
@@ -131,13 +142,15 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
   );
 }
 
-function MatchRow({ match, competitionId, homeName, awayName, manualPoints }: { match: Match; competitionId: string; homeName: string; awayName: string; manualPoints: boolean }) {
+function MatchRow({ match, competitionId, homeName, awayName, manualPoints, modeOptions, mapOptions }: { match: Match; competitionId: string; homeName: string; awayName: string; manualPoints: boolean; modeOptions: import("@/components/image-select").ImageOption[]; mapOptions: import("@/components/image-select").ImageOption[] }) {
   const { toast } = useToast();
   const [sh, setSh] = useState(String(match.scoreHome ?? ""));
   const [sa, setSa] = useState(String(match.scoreAway ?? ""));
   const [dt, setDt] = useState(toLocalInput(match.datetime as unknown as string));
   const [ph, setPh] = useState(match.pointsHome != null ? String(match.pointsHome) : "");
   const [pa, setPa] = useState(match.pointsAway != null ? String(match.pointsAway) : "");
+  const [gm, setGm] = useState(match.gameMode ?? "");
+  const [mp, setMp] = useState(match.map ?? "");
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/matches", competitionId] });
 
@@ -163,6 +176,11 @@ function MatchRow({ match, competitionId, homeName, awayName, manualPoints }: { 
     onSuccess: () => { invalidate(); toast({ title: "Date enregistrée" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
+  const saveMeta = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/matches/${match.id}`, { gameMode: gm || null, map: mp || null }),
+    onSuccess: () => { invalidate(); toast({ title: "Mode/map enregistrés" }); },
+    onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
+  });
   const del = useMutation({
     mutationFn: () => apiRequest("DELETE", `/api/matches/${match.id}`),
     onSuccess: () => { invalidate(); toast({ title: "Match supprimé" }); },
@@ -186,7 +204,15 @@ function MatchRow({ match, competitionId, homeName, awayName, manualPoints }: { 
       </div>
       <div className="flex items-center gap-2 flex-wrap pl-1 text-xs text-muted-foreground">
         <span>{ng} affrontement{ng > 1 ? "s" : ""} · {rpg} manche{rpg > 1 ? "s" : ""}/affr.</span>
+        <MetaBadges gameMode={match.gameMode} map={match.map} />
         {match.modifier && <span className="px-1.5 py-0.5 rounded bg-muted">Mod. : {match.modifier}</span>}
+      </div>
+      <div className="flex items-center gap-2 flex-wrap pl-1">
+        <span className="text-xs text-muted-foreground">Mode</span>
+        <div className="w-40"><ImageSelect value={gm} onChange={setGm} options={modeOptions} placeholder="Mode" /></div>
+        <span className="text-xs text-muted-foreground">Map</span>
+        <div className="w-44"><ImageSelect value={mp} onChange={setMp} options={mapOptions} placeholder="Map" /></div>
+        <Button size="sm" variant="outline" disabled={saveMeta.isPending} onClick={() => saveMeta.mutate()}>Enregistrer</Button>
       </div>
       {manualPoints && (
         <div className="flex items-center gap-2 flex-wrap pl-1">

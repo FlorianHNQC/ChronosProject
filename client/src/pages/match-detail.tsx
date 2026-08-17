@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { UserRound, ArrowLeft } from "lucide-react";
+import { MetaBadges } from "@/lib/bs-catalog";
 import type { Match, Team } from "@shared/schema";
 
 type MatchStat = {
@@ -60,10 +61,10 @@ export function MatchDetailPage() {
         </div>
       )}
       {match && (
-        <p className="text-center text-xs text-muted-foreground mb-8">
-          {match.gameMode ? `${match.gameMode} · ` : ""}
-          {match.datetime ? new Date(match.datetime).toLocaleDateString("fr-FR") : ""}
-        </p>
+        <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
+          <MetaBadges gameMode={match.gameMode} map={match.map} />
+          {match.datetime && <span className="text-xs text-muted-foreground">{new Date(match.datetime).toLocaleDateString("fr-FR")}</span>}
+        </div>
       )}
 
       {(stats ?? []).length === 0 ? (

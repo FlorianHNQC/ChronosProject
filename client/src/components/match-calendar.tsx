@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, List, ChevronLeft, ChevronRight } from "lucide-react";
+import { MetaBadges } from "@/lib/bs-catalog";
 import type { Match, Team } from "@shared/schema";
 
 const STATUS: Record<string, { label: string; color: string }> = {
@@ -103,7 +104,7 @@ export function MatchCalendar({ matches, teams }: { matches: Match[]; teams: Tea
           <span className="font-mono text-sm shrink-0">{done ? `${m.scoreHome ?? 0} – ${m.scoreAway ?? 0}` : "vs"}</span>
           <span className="font-medium truncate flex-1">{teamName(m.teamAwayId)}</span>
         </div>
-        <div className="text-xs text-muted-foreground text-right shrink-0 w-24">{m.gameMode ?? ""}</div>
+        <div className="shrink-0"><MetaBadges gameMode={m.gameMode} map={m.map} /></div>
       </Card>
     );
   };

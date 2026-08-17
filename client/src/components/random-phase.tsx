@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Trophy, LayoutGrid, Swords, UserRound } from "lucide-react";
 import { PlayerPoules } from "@/components/player-poules";
+import { MetaBadges } from "@/lib/bs-catalog";
 
 type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
 type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null };
@@ -99,12 +100,7 @@ function PublicMatch({ m }: { m: MatchView }) {
   const done = !!m.winner;
   return (
     <Card className="p-3">
-      {(m.gameMode || m.map) && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          {m.gameMode && <span className="px-1.5 py-0.5 rounded bg-muted">{m.gameMode}</span>}
-          {m.map && <span className="px-1.5 py-0.5 rounded bg-muted">{m.map}</span>}
-        </div>
-      )}
+      {(m.gameMode || m.map) && <div className="mb-2"><MetaBadges gameMode={m.gameMode} map={m.map} /></div>}
       <div className="flex items-stretch gap-2">
         <Side players={m.teamA} accent="#3BA7E2" won={m.winner === "a"} />
         <div className="flex flex-col items-center justify-center shrink-0 px-1">
