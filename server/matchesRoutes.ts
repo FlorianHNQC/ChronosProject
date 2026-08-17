@@ -35,7 +35,7 @@ export function registerMatchesRoutes(app: Express) {
 
   app.post("/api/matches", async (req, res, next) => {
     try {
-      const { competitionId, teamHomeId, teamAwayId, matchType, datetime, gameMode, map, numGames, roundsPerGame, modifier } = req.body ?? {};
+      const { competitionId, teamHomeId, teamAwayId, matchType, datetime, gameMode, map, mapHidden, numGames, roundsPerGame, modifier } = req.body ?? {};
       if (!teamHomeId || !teamAwayId) {
         return res.status(400).json({ message: "Les deux équipes sont requises." });
       }
@@ -55,6 +55,7 @@ export function registerMatchesRoutes(app: Express) {
         hasTime: !!datetime,
         gameMode: gameMode || undefined,
         map: map || undefined,
+        mapHidden: !!mapHidden,
         numGames: posInt(numGames, 3),
         roundsPerGame: posInt(roundsPerGame, 3),
         modifier: modifier || undefined,
@@ -70,7 +71,7 @@ export function registerMatchesRoutes(app: Express) {
     try {
       const b = req.body ?? {};
       const patch: Record<string, unknown> = {};
-      for (const k of ["scoreHome", "scoreAway", "winnerId", "status", "gameMode", "map", "matchType", "numGames", "roundsPerGame", "modifier", "pointsHome", "pointsAway"]) {
+      for (const k of ["scoreHome", "scoreAway", "winnerId", "status", "gameMode", "map", "mapHidden", "matchType", "numGames", "roundsPerGame", "modifier", "pointsHome", "pointsAway"]) {
         if (b[k] !== undefined) patch[k] = b[k];
       }
       if (b.datetime !== undefined) {

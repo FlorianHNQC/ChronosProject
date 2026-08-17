@@ -75,6 +75,7 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
   const [modifier, setModifier] = useState("");
   const [gameMode, setGameMode] = useState("");
   const [map, setMap] = useState("");
+  const [mapHidden, setMapHidden] = useState(false);
 
   const create = useMutation({
     mutationFn: () => apiRequest("POST", "/api/matches", {
@@ -86,9 +87,10 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
       modifier: modifier || null,
       gameMode: gameMode || null,
       map: map || null,
+      mapHidden,
     }),
     onSuccess: () => {
-      setHome(""); setAway(""); setDatetime(""); setModifier(""); setGameMode(""); setMap("");
+      setHome(""); setAway(""); setDatetime(""); setModifier(""); setGameMode(""); setMap(""); setMapHidden(false);
       queryClient.invalidateQueries({ queryKey: ["/api/matches", competitionId] });
       toast({ title: "Match créé" });
     },
@@ -122,6 +124,9 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
             <div className="w-40 mt-0.5"><ImageSelect value={gameMode} onChange={setGameMode} options={modeOptions} placeholder="Mode" /></div></label>
           <label className="text-xs text-muted-foreground">Map
             <div className="w-44 mt-0.5"><ImageSelect value={map} onChange={setMap} options={mapOptions} placeholder="Map" /></div></label>
+          <label className="text-xs text-muted-foreground flex items-center gap-1 self-center pt-4" title="Cacher la map au public jusqu'à révélation">
+            <input type="checkbox" checked={mapHidden} onChange={(e) => setMapHidden(e.target.checked)} /> Cachée
+          </label>
           <label className="text-xs text-muted-foreground">Modificateurs
             <Input value={modifier} onChange={(e) => setModifier(e.target.value)} placeholder="ex. sans Gadget" className="w-44 h-9 mt-0.5" /></label>
           <label className="text-xs text-muted-foreground">Date &amp; heure
@@ -151,6 +156,7 @@ function MatchRow({ match, competitionId, homeName, awayName, manualPoints, mode
   const [pa, setPa] = useState(match.pointsAway != null ? String(match.pointsAway) : "");
   const [gm, setGm] = useState(match.gameMode ?? "");
   const [mp, setMp] = useState(match.map ?? "");
+  const [mh, setMh] = useState(!!match.mapHidden);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/matches", competitionId] });
 
@@ -177,7 +183,7 @@ function MatchRow({ match, competitionId, homeName, awayName, manualPoints, mode
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
   const saveMeta = useMutation({
-    mutationFn: () => apiRequest("PATCH", `/api/matches/${match.id}`, { gameMode: gm || null, map: mp || null }),
+    mutationFn: () => apiRequest("PATCH", `/api/matches/${match.id}`, { gameMode: gm || null, map: mp || null, mapHidden: mh }),
     onSuccess: () => { invalidate(); toast({ title: "Mode/map enregistrés" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
@@ -212,6 +218,9 @@ function MatchRow({ match, competitionId, homeName, awayName, manualPoints, mode
         <div className="w-40"><ImageSelect value={gm} onChange={setGm} options={modeOptions} placeholder="Mode" /></div>
         <span className="text-xs text-muted-foreground">Map</span>
         <div className="w-44"><ImageSelect value={mp} onChange={setMp} options={mapOptions} placeholder="Map" /></div>
+        <label className="text-xs text-muted-foreground flex items-center gap-1" title="Cacher la map au public jusqu'à révélation">
+          <input type="checkbox" checked={mh} onChange={(e) => setMh(e.target.checked)} /> Cachée
+        </label>
         <Button size="sm" variant="outline" disabled={saveMeta.isPending} onClick={() => saveMeta.mutate()}>Enregistrer</Button>
       </div>
       {manualPoints && (

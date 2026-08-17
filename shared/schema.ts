@@ -293,6 +293,8 @@ export const matches = pgTable("matches", {
   // nombre de manches par affrontement.
   numGames: integer("num_games").default(3),
   roundsPerGame: integer("rounds_per_game").default(3),
+  // Map cachée au grand public jusqu'à révélation.
+  mapHidden: boolean("map_hidden").default(false),
   // Durée en secondes — nécessaire à la normalisation des dégâts (notation).
   durationSeconds: integer("duration_seconds").default(150),
   moderator: text("moderator"),
@@ -448,6 +450,8 @@ export const randomMatches = pgTable("random_matches", {
   // map choisie une fois les affrontements définis.
   gameMode: text("game_mode"),
   map: text("map"),
+  // Map cachée au grand public jusqu'à révélation (au dernier moment).
+  mapHidden: boolean("map_hidden").default(false),
   datetime: timestamp("datetime"),
   createdAt: timestamp("created_at").defaultNow(),
 });

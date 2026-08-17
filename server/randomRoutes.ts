@@ -112,8 +112,8 @@ export function registerRandomRoutes(app: Express) {
     try {
       const b = req.body ?? {};
       // Métadonnées (mode/map/date) et/ou résultat.
-      if (b.gameMode !== undefined || b.map !== undefined || b.datetime !== undefined) {
-        await randomStore.setMatchMeta(req.params.id, { gameMode: b.gameMode, map: b.map, datetime: b.datetime });
+      if (b.gameMode !== undefined || b.map !== undefined || b.datetime !== undefined || b.mapHidden !== undefined) {
+        await randomStore.setMatchMeta(req.params.id, { gameMode: b.gameMode, map: b.map, datetime: b.datetime, mapHidden: b.mapHidden });
       }
       if (b.scoreA !== undefined || b.scoreB !== undefined) {
         const updated = await randomStore.setMatchResult(req.params.id, Number(b.scoreA) || 0, Number(b.scoreB) || 0);

@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Card } from "@/components/ui/card";
 import { Trophy, LayoutGrid, Swords, X } from "lucide-react";
 import { PlayerPoules } from "@/components/player-poules";
-import { MetaBadges } from "@/lib/bs-catalog";
 import { MatchVisualView } from "@/components/match-visual";
 
 type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
-type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null; datetime: string | null };
+type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null; mapHidden: boolean; datetime: string | null };
 type RoundView = { id: string; roundNumber: number; gameMode: string | null; bans: string | null; note: string | null; matches: MatchView[] };
 type LeaderRow = { playerId: string; pseudo: string; avatarUrl: string | null; played: number; wins: number; losses: number; gamesWon: number; gamesLost: number };
 
@@ -67,8 +65,17 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
                 {r.gameMode && <span className="text-xs bg-muted rounded px-2 py-0.5">{r.gameMode}</span>}
                 {r.bans && <span className="text-xs text-muted-foreground">Bans : {r.bans}</span>}
               </div>
-              <div className="space-y-2">
-                {r.matches.map((m) => <PublicMatch key={m.id} m={m} onOpen={() => setDetail({ m, bans: splitBans(r.bans) })} />)}
+              <div className="flex flex-wrap gap-3">
+                {r.matches.map((m) => (
+                  <MatchVisualView key={m.id} className="w-[300px]"
+                    mapName={m.map} modeName={m.gameMode} mapHidden={m.mapHidden}
+                    a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}
+                    b={{ name: "Équipe B", players: m.teamB, won: m.winner === "b" }}
+                    score={m.winner ? { a: m.scoreA, b: m.scoreB } : null}
+                    bans={splitBans(r.bans)}
+                    onExpand={() => setDetail({ m, bans: splitBans(r.bans) })}
+                  />
+                ))}
                 {r.matches.length === 0 && <p className="text-sm text-muted-foreground">Aucun affrontement.</p>}
               </div>
             </div>
@@ -84,22 +91,6 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
   );
 }
 
-function names(t: PoolPlayer[]) { return t.map((p) => p.pseudo).join(" · "); }
-
-function PublicMatch({ m, onOpen }: { m: MatchView; onOpen: () => void }) {
-  const done = !!m.winner;
-  return (
-    <Card onClick={onOpen} className="p-3 cursor-pointer hover:bg-muted/40 transition-colors" title="Voir les détails">
-      {(m.gameMode || m.map) && <div className="mb-2"><MetaBadges gameMode={m.gameMode} map={m.map} /></div>}
-      <div className="flex items-center gap-3">
-        <span className={"flex-1 text-sm text-right truncate " + (m.winner === "a" ? "font-bold" : "")}>{names(m.teamA)}</span>
-        <span className="font-mono text-sm shrink-0">{done ? `${m.scoreA} – ${m.scoreB}` : "vs"}</span>
-        <span className={"flex-1 text-sm truncate " + (m.winner === "b" ? "font-bold" : "")}>{names(m.teamB)}</span>
-      </div>
-    </Card>
-  );
-}
-
 function DetailModal({ m, bans, onClose }: { m: MatchView; bans: string[]; onClose: () => void }) {
   const done = !!m.winner;
   const sub = m.datetime ? new Date(m.datetime).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : null;
@@ -110,14 +101,16 @@ function DetailModal({ m, bans, onClose }: { m: MatchView; bans: string[]; onClo
           <X className="h-4 w-4" />
         </button>
         <MatchVisualView
+          large
           mapName={m.map}
           modeName={m.gameMode}
+          mapHidden={m.mapHidden}
           a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}
           b={{ name: "Équipe B", players: m.teamB, won: m.winner === "b" }}
           score={done ? { a: m.scoreA, b: m.scoreB } : null}
           bans={bans}
           subtitle={sub}
-          className="w-[360px] max-w-[92vw] shadow-2xl"
+          className="w-[460px] max-w-[94vw] shadow-2xl"
         />
       </div>
     </div>

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { UserRound, Ban } from "lucide-react";
+import { UserRound, Ban, HelpCircle, Maximize2 } from "lucide-react";
 import { useBsCatalog, BrawlerIcon } from "@/lib/bs-catalog";
 import type { Match, Team } from "@shared/schema";
 
@@ -15,7 +15,7 @@ export type VisualSide = { name: string; logo?: string | null; players: PlayerLi
  * réutilisable pour un match d'équipe comme pour un affrontement aléatoire.
  */
 export function MatchVisualView({
-  mapName, modeName, a, b, score, bans = [], detailHref, subtitle, className = "",
+  mapName, modeName, a, b, score, bans = [], detailHref, subtitle, mapHidden = false, large = false, onExpand, className = "",
 }: {
   mapName?: string | null;
   modeName?: string | null;
@@ -25,18 +25,39 @@ export function MatchVisualView({
   bans?: string[];
   detailHref?: string;
   subtitle?: string | null;
+  mapHidden?: boolean;
+  large?: boolean;
+  onExpand?: () => void;
   className?: string;
 }) {
   const { mapByName, modeByName } = useBsCatalog();
   const mapInfo = mapName ? mapByName.get(mapName.trim().toLowerCase()) : undefined;
   const modeInfo = modeName ? modeByName.get(modeName.trim().toLowerCase()) : undefined;
   const banList = bans.filter(Boolean);
+  const mapW = large ? "w-[188px]" : "w-[112px]";
 
   const Banner = (
     <>
       {modeInfo?.imageUrl && <img src={modeInfo.imageUrl} alt="" className="h-5 w-5 object-contain" />}
-      <span className="font-semibold text-sm truncate">{mapName || "Map à définir"}</span>
+      <span className="font-semibold text-sm truncate">{mapHidden ? "Map cachée" : (mapName || "Map à définir")}</span>
     </>
+  );
+
+  const MapImage = (
+    <div className={"w-full aspect-[3/5] rounded-lg overflow-hidden bg-muted ring-1 ring-border flex items-center justify-center relative"}>
+      {mapHidden ? (
+        <HelpCircle className="h-1/3 w-1/3 text-muted-foreground/60" />
+      ) : mapInfo?.imageUrl ? (
+        <img src={mapInfo.imageUrl} alt={mapName ?? ""} className="w-full h-full object-cover" loading="lazy" />
+      ) : (
+        <span className="text-xs text-muted-foreground text-center px-1">{mapName || "?"}</span>
+      )}
+      {onExpand && (
+        <span className="absolute bottom-1 right-1 h-6 w-6 rounded bg-black/50 text-white flex items-center justify-center opacity-80 group-hover/map:opacity-100">
+          <Maximize2 className="h-3.5 w-3.5" />
+        </span>
+      )}
+    </div>
   );
 
   return (
@@ -49,14 +70,10 @@ export function MatchVisualView({
 
       <div className="flex items-stretch gap-2 p-3">
         <SideColumn side={a} accent="#2f6fed" align="right" />
-        <div className="flex flex-col items-center justify-center shrink-0 w-[112px]">
-          <div className="w-full aspect-[3/5] rounded-lg overflow-hidden bg-muted ring-1 ring-border flex items-center justify-center">
-            {mapInfo?.imageUrl ? (
-              <img src={mapInfo.imageUrl} alt={mapName ?? ""} className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <span className="text-xs text-muted-foreground text-center px-1">{mapName || "?"}</span>
-            )}
-          </div>
+        <div className={"flex flex-col items-center justify-center shrink-0 " + mapW}>
+          {onExpand ? (
+            <button type="button" onClick={onExpand} title="Agrandir" className="w-full group/map">{MapImage}</button>
+          ) : MapImage}
           <div className="mt-2 font-mono text-sm">
             {score ? (
               <span><b className={a.won ? "text-primary" : ""}>{score.a}</b> – <b className={b.won ? "text-primary" : ""}>{score.b}</b></span>
@@ -72,7 +89,7 @@ export function MatchVisualView({
       {banList.length > 0 && (
         <div className="flex items-center justify-center gap-1.5 border-t bg-background/60 px-3 py-2">
           <Ban className="h-3.5 w-3.5 text-destructive shrink-0" />
-          {banList.map((x, i) => <BrawlerIcon key={x + i} name={x} size={26} />)}
+          {banList.map((x, i) => <BrawlerIcon key={x + i} name={x} size={large ? 32 : 26} />)}
         </div>
       )}
     </div>
@@ -142,6 +159,7 @@ export function MatchVisual({ match, homeName, awayName, bans, detailHref, class
     <MatchVisualView
       mapName={match.map}
       modeName={match.gameMode}
+      mapHidden={!!match.mapHidden}
       a={{ name: homeName, logo: homeTeam.data?.logoUrl ?? null, players: homeRoster.data ?? [], won: done && match.winnerId === match.teamHomeId }}
       b={{ name: awayName, logo: awayTeam.data?.logoUrl ?? null, players: awayRoster.data ?? [], won: done && match.winnerId === match.teamAwayId }}
       score={done ? { a: match.scoreHome ?? 0, b: match.scoreAway ?? 0 } : null}
