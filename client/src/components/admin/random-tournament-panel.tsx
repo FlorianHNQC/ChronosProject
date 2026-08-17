@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Shuffle, X, Trophy, Trash2, Scale } from "lucide-react";
+import { Shuffle, X, Trophy, Trash2, Scale, UserRound } from "lucide-react";
 import type { Player } from "@shared/schema";
 
 type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null };
@@ -213,6 +213,30 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
   );
 }
 
+function TeamBlock({ label, players, side, won }: { label: string; players: PoolPlayer[]; side: "a" | "b"; won: boolean }) {
+  const accent = side === "a" ? "#3BA7E2" : "#E2683B";
+  return (
+    <div className={"flex-1 min-w-[9rem] rounded-lg border p-2 " + (won ? "ring-2" : "")} style={won ? { borderColor: accent, boxShadow: `inset 0 0 0 1px ${accent}` } : undefined}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: accent }}>{label}</span>
+        {won && <span className="text-[10px] font-bold" style={{ color: accent }}>Vainqueur</span>}
+      </div>
+      <div className="flex flex-col gap-1">
+        {players.map((p) => (
+          <div key={p.playerId} className="flex items-center gap-1.5">
+            {p.avatarUrl ? (
+              <img src={p.avatarUrl} alt={p.pseudo} className="h-6 w-6 rounded object-cover bg-muted ring-1 ring-border shrink-0" />
+            ) : (
+              <div className="h-6 w-6 rounded bg-muted flex items-center justify-center ring-1 ring-border shrink-0"><UserRound className="h-3.5 w-3.5 text-muted-foreground" /></div>
+            )}
+            <span className="text-sm truncate">{p.pseudo}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MatchRow({ m, onSaveScore, onSaveMeta, onDelete }: {
   m: MatchView;
   onSaveScore: (a: number, b: number) => void;
@@ -223,21 +247,33 @@ function MatchRow({ m, onSaveScore, onSaveMeta, onDelete }: {
   const [b, setB] = useState(String(m.scoreB));
   const [mode, setMode] = useState(m.gameMode ?? "");
   const [map, setMap] = useState(m.map ?? "");
-  const names = (t: PoolPlayer[]) => t.map((p) => p.pseudo).join(" · ");
   return (
-    <div className="border rounded-lg p-2 space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className={"flex-1 text-sm text-right truncate " + (m.winner === "a" ? "font-bold" : "")}>{names(m.teamA)}</span>
-        <Input type="number" value={a} onChange={(e) => setA(e.target.value)} className="w-14 h-8 text-center" />
-        <span className="text-muted-foreground">–</span>
-        <Input type="number" value={b} onChange={(e) => setB(e.target.value)} className="w-14 h-8 text-center" />
-        <span className={"flex-1 text-sm truncate " + (m.winner === "b" ? "font-bold" : "")}>{names(m.teamB)}</span>
-        <Button size="sm" variant="outline" onClick={() => onSaveScore(Number(a) || 0, Number(b) || 0)}>OK</Button>
-        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Supprimer l'affrontement" onClick={onDelete}>
+    <div className="border rounded-lg p-3 space-y-2 bg-background/40">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {m.gameMode && <span className="px-1.5 py-0.5 rounded bg-muted">{m.gameMode}</span>}
+          {m.map && <span className="px-1.5 py-0.5 rounded bg-muted">{m.map}</span>}
+        </div>
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Supprimer l'affrontement" onClick={onDelete}>
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
+
+      {/* Composition claire des deux trios */}
+      <div className="flex items-stretch gap-2">
+        <TeamBlock label="Équipe A" players={m.teamA} side="a" won={m.winner === "a"} />
+        <div className="flex flex-col items-center justify-center gap-1 shrink-0">
+          <div className="flex items-center gap-1">
+            <Input type="number" value={a} onChange={(e) => setA(e.target.value)} className="w-12 h-8 text-center" />
+            <span className="text-muted-foreground">–</span>
+            <Input type="number" value={b} onChange={(e) => setB(e.target.value)} className="w-12 h-8 text-center" />
+          </div>
+          <Button size="sm" variant="outline" className="h-7" onClick={() => onSaveScore(Number(a) || 0, Number(b) || 0)}>Score</Button>
+        </div>
+        <TeamBlock label="Équipe B" players={m.teamB} side="b" won={m.winner === "b"} />
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap pt-1">
         <span className="text-xs text-muted-foreground">Mode</span>
         <Input list="rnd-modes" value={mode} onChange={(e) => setMode(e.target.value)} placeholder="ex. Gem Grab" className="w-40 h-8" />
         <span className="text-xs text-muted-foreground">Map</span>
