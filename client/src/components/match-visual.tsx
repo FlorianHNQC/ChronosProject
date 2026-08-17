@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { UserRound, Ban, HelpCircle, Maximize2 } from "lucide-react";
+import { UserRound, Ban, HelpCircle, Maximize2, Clock } from "lucide-react";
 import { useBsCatalog, BrawlerIcon } from "@/lib/bs-catalog";
 import type { Match, Team } from "@shared/schema";
 
@@ -15,7 +15,7 @@ export type VisualSide = { name: string; logo?: string | null; players: PlayerLi
  * réutilisable pour un match d'équipe comme pour un affrontement aléatoire.
  */
 export function MatchVisualView({
-  mapName, modeName, a, b, score, bans = [], detailHref, subtitle, mapHidden = false, large = false, onExpand, className = "",
+  mapName, modeName, a, b, score, bans = [], detailHref, subtitle, time, mapHidden = false, large = false, onExpand, className = "",
 }: {
   mapName?: string | null;
   modeName?: string | null;
@@ -25,6 +25,7 @@ export function MatchVisualView({
   bans?: string[];
   detailHref?: string;
   subtitle?: string | null;
+  time?: string | null;
   mapHidden?: boolean;
   large?: boolean;
   onExpand?: () => void;
@@ -66,6 +67,13 @@ export function MatchVisualView({
         <Link href={detailHref} className="flex items-center justify-center gap-2 bg-background/60 border-b px-3 py-2 hover:bg-muted/60">{Banner}</Link>
       ) : (
         <div className="flex items-center justify-center gap-2 bg-background/60 border-b px-3 py-2">{Banner}</div>
+      )}
+
+      {/* Heure du match — mise en évidence (donnée clé). */}
+      {time && (
+        <div className="flex items-center justify-center gap-1.5 bg-primary/10 text-primary font-bold text-sm px-3 py-1.5 border-b">
+          <Clock className="h-4 w-4" /> {time}
+        </div>
       )}
 
       <div className="flex items-stretch gap-2 p-3">
@@ -155,11 +163,15 @@ export function MatchVisual({ match, homeName, awayName, bans, detailHref, class
   }, [bans, homeTeam.data, awayTeam.data]);
 
   const done = match.status === "completed";
+  const time = match.datetime
+    ? new Date(match.datetime as unknown as string).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : null;
   return (
     <MatchVisualView
       mapName={match.map}
       modeName={match.gameMode}
       mapHidden={!!match.mapHidden}
+      time={time}
       a={{ name: homeName, logo: homeTeam.data?.logoUrl ?? null, players: homeRoster.data ?? [], won: done && match.winnerId === match.teamHomeId }}
       b={{ name: awayName, logo: awayTeam.data?.logoUrl ?? null, players: awayRoster.data ?? [], won: done && match.winnerId === match.teamAwayId }}
       score={done ? { a: match.scoreHome ?? 0, b: match.scoreAway ?? 0 } : null}
