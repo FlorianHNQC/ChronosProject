@@ -18,6 +18,7 @@ export type MatchView = {
   winner: string | null;
   gameMode: string | null;
   map: string | null;
+  datetime: string | null;
 };
 export type RoundView = {
   id: string;
@@ -245,6 +246,7 @@ export const randomStore = {
         winner: m.winner,
         gameMode: m.gameMode ?? null,
         map: m.map ?? null,
+        datetime: m.datetime ? new Date(m.datetime).toISOString() : null,
       });
     }
     return rounds.map((r) => ({
@@ -263,11 +265,12 @@ export const randomStore = {
     return row;
   },
 
-  /** Mode/map d'un affrontement (le mode peut varier ; la map se choisit après le tirage). */
-  async setMatchMeta(matchId: string, meta: { gameMode?: string | null; map?: string | null }): Promise<RandomMatch | undefined> {
+  /** Mode/map/date d'un affrontement (le mode peut varier ; la map/date se choisissent après le tirage). */
+  async setMatchMeta(matchId: string, meta: { gameMode?: string | null; map?: string | null; datetime?: string | null }): Promise<RandomMatch | undefined> {
     const patch: Record<string, unknown> = {};
     if (meta.gameMode !== undefined) patch.gameMode = meta.gameMode || null;
     if (meta.map !== undefined) patch.map = meta.map || null;
+    if (meta.datetime !== undefined) patch.datetime = meta.datetime ? new Date(meta.datetime) : null;
     if (Object.keys(patch).length === 0) return undefined;
     const [row] = await db.update(randomMatches).set(patch).where(eq(randomMatches.id, matchId)).returning();
     return row;

@@ -448,6 +448,7 @@ export const randomMatches = pgTable("random_matches", {
   // map choisie une fois les affrontements définis.
   gameMode: text("game_mode"),
   map: text("map"),
+  datetime: timestamp("datetime"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

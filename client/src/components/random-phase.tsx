@@ -3,18 +3,23 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
-import { Trophy, LayoutGrid, Swords, UserRound } from "lucide-react";
+import { Trophy, LayoutGrid, Swords, X } from "lucide-react";
 import { PlayerPoules } from "@/components/player-poules";
 import { MetaBadges } from "@/lib/bs-catalog";
+import { MatchVisualView } from "@/components/match-visual";
 
 type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
-type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null };
+type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null; datetime: string | null };
 type RoundView = { id: string; roundNumber: number; gameMode: string | null; bans: string | null; note: string | null; matches: MatchView[] };
 type LeaderRow = { playerId: string; pseudo: string; avatarUrl: string | null; played: number; wins: number; losses: number; gamesWon: number; gamesLost: number };
+
+const splitBans = (s: string | null | undefined): string[] => (s ?? "").split(/[,;]/).map((x) => x.trim()).filter(Boolean);
 
 /** Vue publique d'un tournoi à équipes aléatoires : affrontements (+ poules) et classement, en onglets. */
 export function RandomPhase({ competitionId }: { competitionId: string }) {
   const [tab, setTab] = useState<"matchs" | "classement">("matchs");
+  const [detail, setDetail] = useState<{ m: MatchView; bans: string[] } | null>(null);
+
   const { data: rounds } = useQuery<RoundView[]>({
     queryKey: ["/api/random", competitionId, "rounds"],
     queryFn: async () => (await apiRequest("GET", `/api/random/${competitionId}/rounds`)).json(),
@@ -63,7 +68,7 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
                 {r.bans && <span className="text-xs text-muted-foreground">Bans : {r.bans}</span>}
               </div>
               <div className="space-y-2">
-                {r.matches.map((m) => <PublicMatch key={m.id} m={m} />)}
+                {r.matches.map((m) => <PublicMatch key={m.id} m={m} onOpen={() => setDetail({ m, bans: splitBans(r.bans) })} />)}
                 {r.matches.length === 0 && <p className="text-sm text-muted-foreground">Aucun affrontement.</p>}
               </div>
             </div>
@@ -73,42 +78,49 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
       ) : (
         <Leaderboard board={board ?? []} />
       )}
+
+      {detail && <DetailModal m={detail.m} bans={detail.bans} onClose={() => setDetail(null)} />}
     </div>
   );
 }
 
-function Side({ players, accent, won }: { players: PoolPlayer[]; accent: string; won: boolean }) {
-  return (
-    <div className={"flex-1 min-w-[9rem] rounded-lg border p-2 " + (won ? "ring-2" : "")} style={won ? { borderColor: accent } : undefined}>
-      <div className="flex flex-col gap-1">
-        {players.map((p) => (
-          <Link key={p.playerId} href={`/joueurs/${p.playerId}`} className="flex items-center gap-1.5 group">
-            {p.avatarUrl ? (
-              <img src={p.avatarUrl} alt={p.pseudo} className="h-6 w-6 rounded object-cover bg-muted ring-1 ring-border shrink-0" />
-            ) : (
-              <div className="h-6 w-6 rounded bg-muted flex items-center justify-center ring-1 ring-border shrink-0"><UserRound className="h-3.5 w-3.5 text-muted-foreground" /></div>
-            )}
-            <span className="text-sm truncate group-hover:text-primary">{p.pseudo}</span>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
+function names(t: PoolPlayer[]) { return t.map((p) => p.pseudo).join(" · "); }
 
-function PublicMatch({ m }: { m: MatchView }) {
+function PublicMatch({ m, onOpen }: { m: MatchView; onOpen: () => void }) {
   const done = !!m.winner;
   return (
-    <Card className="p-3">
+    <Card onClick={onOpen} className="p-3 cursor-pointer hover:bg-muted/40 transition-colors" title="Voir les détails">
       {(m.gameMode || m.map) && <div className="mb-2"><MetaBadges gameMode={m.gameMode} map={m.map} /></div>}
-      <div className="flex items-stretch gap-2">
-        <Side players={m.teamA} accent="#3BA7E2" won={m.winner === "a"} />
-        <div className="flex flex-col items-center justify-center shrink-0 px-1">
-          <span className="font-mono text-sm">{done ? `${m.scoreA} – ${m.scoreB}` : "vs"}</span>
-        </div>
-        <Side players={m.teamB} accent="#E2683B" won={m.winner === "b"} />
+      <div className="flex items-center gap-3">
+        <span className={"flex-1 text-sm text-right truncate " + (m.winner === "a" ? "font-bold" : "")}>{names(m.teamA)}</span>
+        <span className="font-mono text-sm shrink-0">{done ? `${m.scoreA} – ${m.scoreB}` : "vs"}</span>
+        <span className={"flex-1 text-sm truncate " + (m.winner === "b" ? "font-bold" : "")}>{names(m.teamB)}</span>
       </div>
     </Card>
+  );
+}
+
+function DetailModal({ m, bans, onClose }: { m: MatchView; bans: string[]; onClose: () => void }) {
+  const done = !!m.winner;
+  const sub = m.datetime ? new Date(m.datetime).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute -top-3 -right-3 z-10 h-8 w-8 rounded-full bg-card border flex items-center justify-center hover:bg-muted">
+          <X className="h-4 w-4" />
+        </button>
+        <MatchVisualView
+          mapName={m.map}
+          modeName={m.gameMode}
+          a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}
+          b={{ name: "Équipe B", players: m.teamB, won: m.winner === "b" }}
+          score={done ? { a: m.scoreA, b: m.scoreB } : null}
+          bans={bans}
+          subtitle={sub}
+          className="w-[360px] max-w-[92vw] shadow-2xl"
+        />
+      </div>
+    </div>
   );
 }
 

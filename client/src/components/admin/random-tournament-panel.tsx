@@ -12,7 +12,7 @@ import { useBsCatalog, MetaBadges } from "@/lib/bs-catalog";
 import type { Player } from "@shared/schema";
 
 type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
-type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null };
+type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null; datetime: string | null };
 type RoundView = { id: string; roundNumber: number; gameMode: string | null; bans: string | null; note: string | null; matches: MatchView[] };
 type LeaderRow = { playerId: string; pseudo: string; avatarUrl: string | null; played: number; wins: number; losses: number; gamesWon: number; gamesLost: number };
 type Suggestions = { modes: string[]; maps: string[] };
@@ -97,7 +97,7 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
   const setMeta = useMutation({
-    mutationFn: (v: { id: string; gameMode?: string; map?: string }) => apiRequest("PATCH", `/api/random/matches/${v.id}`, { gameMode: v.gameMode, map: v.map }),
+    mutationFn: (v: { id: string; gameMode?: string; map?: string; datetime?: string | null }) => apiRequest("PATCH", `/api/random/matches/${v.id}`, { gameMode: v.gameMode, map: v.map, datetime: v.datetime }),
     onSuccess: () => { invalidate(); toast({ title: "Enregistré" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
@@ -269,7 +269,7 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
             {r.matches.map((m) => (
               <MatchRow key={m.id} m={m} modeOptions={modeOptions} mapOptions={mapOptions}
                 onSaveScore={(a, b) => setResult.mutate({ id: m.id, scoreA: a, scoreB: b })}
-                onSaveMeta={(mode, map) => setMeta.mutate({ id: m.id, gameMode: mode, map })}
+                onSaveMeta={(mode, map, datetime) => setMeta.mutate({ id: m.id, gameMode: mode, map, datetime })}
                 onDelete={() => delMatch.mutate(m.id)} />
             ))}
             {r.matches.length === 0 && <p className="text-sm text-muted-foreground">Aucun affrontement (pas assez de joueurs).</p>}
@@ -330,10 +330,18 @@ function TeamBlock({ label, players, side, won }: { label: string; players: Pool
   );
 }
 
+function toLocalInput(v: string | null | undefined): string {
+  if (!v) return "";
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function MatchRow({ m, onSaveScore, onSaveMeta, onDelete, modeOptions, mapOptions }: {
   m: MatchView;
   onSaveScore: (a: number, b: number) => void;
-  onSaveMeta: (mode: string, map: string) => void;
+  onSaveMeta: (mode: string, map: string, datetime: string | null) => void;
   onDelete: () => void;
   modeOptions: ImageOption[];
   mapOptions: ImageOption[];
@@ -342,6 +350,7 @@ function MatchRow({ m, onSaveScore, onSaveMeta, onDelete, modeOptions, mapOption
   const [b, setB] = useState(String(m.scoreB));
   const [mode, setMode] = useState(m.gameMode ?? "");
   const [map, setMap] = useState(m.map ?? "");
+  const [dt, setDt] = useState(toLocalInput(m.datetime));
   return (
     <div className="border rounded-lg p-3 space-y-2 bg-background/40">
       <div className="flex items-center justify-between gap-2">
@@ -370,7 +379,9 @@ function MatchRow({ m, onSaveScore, onSaveMeta, onDelete, modeOptions, mapOption
         <div className="w-40"><ImageSelect value={mode} onChange={setMode} options={modeOptions} placeholder="Mode" /></div>
         <span className="text-xs text-muted-foreground">Map</span>
         <div className="w-44"><ImageSelect value={map} onChange={setMap} options={mapOptions} placeholder="Map" /></div>
-        <Button size="sm" variant="outline" onClick={() => onSaveMeta(mode, map)}>Enregistrer</Button>
+        <span className="text-xs text-muted-foreground">Date</span>
+        <Input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className="w-52 h-8" />
+        <Button size="sm" variant="outline" onClick={() => onSaveMeta(mode, map, dt ? new Date(dt).toISOString() : null)}>Enregistrer</Button>
       </div>
     </div>
   );
