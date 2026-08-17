@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Shuffle, X, Trophy, Trash2, Scale, UserRound, LayoutGrid } from "lucide-react";
+import { Shuffle, X, Trash2, Scale, UserRound, LayoutGrid } from "lucide-react";
 import { PlayerPoules } from "@/components/player-poules";
 import type { Player } from "@shared/schema";
 
@@ -242,35 +242,6 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
             <Shuffle className="h-4 w-4 mr-1" /> Tirer le tour
           </Button>
         </div>
-      </Card>
-
-      {/* Classement individuel */}
-      <Card className="p-4 mb-6">
-        <h2 className="font-semibold mb-2 flex items-center gap-2"><Trophy className="h-4 w-4 text-primary" /> Classement individuel</h2>
-        {(board ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucun résultat pour l'instant.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-muted-foreground border-b">
-                <th className="text-left py-1.5 pl-1 w-8">#</th><th className="text-left py-1.5">Joueur</th>
-                <th className="text-center py-1.5 w-12">V</th><th className="text-center py-1.5 w-12">D</th>
-                <th className="text-center py-1.5 w-16">Manches</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(board ?? []).map((r, i) => (
-                <tr key={r.playerId} className="border-b last:border-0">
-                  <td className="py-1.5 pl-1 text-muted-foreground">{i + 1}</td>
-                  <td className="py-1.5 font-medium">{r.pseudo}</td>
-                  <td className="py-1.5 text-center tabular-nums">{r.wins}</td>
-                  <td className="py-1.5 text-center tabular-nums">{r.losses}</td>
-                  <td className="py-1.5 text-center tabular-nums text-muted-foreground">{r.gamesWon}–{r.gamesLost}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
       </Card>
 
       {/* Tours */}
