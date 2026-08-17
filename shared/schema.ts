@@ -285,7 +285,8 @@ export const matches = pgTable("matches", {
   teamHomeId: varchar("team_home_id").references(() => teams.id),
   teamAwayId: varchar("team_away_id").references(() => teams.id),
   matchType: matchTypeEnum("match_type").notNull(),
-  datetime: timestamp("datetime"),
+  // Horodatage conscient du fuseau (instant exact, indépendant du fuseau serveur).
+  datetime: timestamp("datetime", { withTimezone: true }),
   hasTime: boolean("has_time").default(false),
   gameMode: text("game_mode"),
   map: text("map"),
@@ -452,7 +453,8 @@ export const randomMatches = pgTable("random_matches", {
   map: text("map"),
   // Map cachée au grand public jusqu'à révélation (au dernier moment).
   mapHidden: boolean("map_hidden").default(false),
-  datetime: timestamp("datetime"),
+  // Horodatage conscient du fuseau (instant exact, indépendant du fuseau serveur).
+  datetime: timestamp("datetime", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

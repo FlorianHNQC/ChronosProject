@@ -81,7 +81,8 @@ export function CompetitionMatchesPanel({ competitionId }: { competitionId: stri
     mutationFn: () => apiRequest("POST", "/api/matches", {
       competitionId, teamHomeId: home, teamAwayId: away,
       matchType: useConferences ? matchType : "intra",
-      datetime: datetime || null,
+      // On envoie un instant UTC explicite (le champ datetime-local est en heure locale).
+      datetime: datetime ? new Date(datetime).toISOString() : null,
       numGames: Number(numGames) || 1,
       roundsPerGame: Number(roundsPerGame) || 1,
       modifier: modifier || null,
