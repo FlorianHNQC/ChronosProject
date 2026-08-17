@@ -268,11 +268,12 @@ export const randomStore = {
   },
 
   /** Mode/map/date d'un affrontement (le mode peut varier ; la map/date se choisissent après le tirage). */
-  async setMatchMeta(matchId: string, meta: { gameMode?: string | null; map?: string | null; datetime?: string | null; mapHidden?: boolean }): Promise<RandomMatch | undefined> {
+  async setMatchMeta(matchId: string, meta: { gameMode?: string | null; map?: string | null; datetime?: string | null; mapHidden?: boolean; roundId?: string }): Promise<RandomMatch | undefined> {
     const patch: Record<string, unknown> = {};
     if (meta.gameMode !== undefined) patch.gameMode = meta.gameMode || null;
     if (meta.map !== undefined) patch.map = meta.map || null;
     if (meta.mapHidden !== undefined) patch.mapHidden = !!meta.mapHidden;
+    if (meta.roundId) patch.roundId = meta.roundId; // déplacer l'affrontement vers un autre tour
     if (meta.datetime !== undefined) patch.datetime = meta.datetime ? new Date(meta.datetime) : null;
     if (Object.keys(patch).length === 0) return undefined;
     const [row] = await db.update(randomMatches).set(patch).where(eq(randomMatches.id, matchId)).returning();

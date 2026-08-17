@@ -97,7 +97,7 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
   const setMeta = useMutation({
-    mutationFn: (v: { id: string; gameMode?: string; map?: string; datetime?: string | null; mapHidden?: boolean }) => apiRequest("PATCH", `/api/random/matches/${v.id}`, { gameMode: v.gameMode, map: v.map, datetime: v.datetime, mapHidden: v.mapHidden }),
+    mutationFn: (v: { id: string; gameMode?: string; map?: string; datetime?: string | null; mapHidden?: boolean; roundId?: string }) => apiRequest("PATCH", `/api/random/matches/${v.id}`, { gameMode: v.gameMode, map: v.map, datetime: v.datetime, mapHidden: v.mapHidden, roundId: v.roundId }),
     onSuccess: () => { invalidate(); toast({ title: "Enregistré" }); },
     onError: (e: Error) => toast({ title: "Échec", description: e.message, variant: "destructive" }),
   });
@@ -268,8 +268,10 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
           <div className="space-y-2">
             {r.matches.map((m) => (
               <MatchRow key={m.id} m={m} modeOptions={modeOptions} mapOptions={mapOptions}
+                rounds={(rounds ?? []).map((x) => ({ id: x.id, roundNumber: x.roundNumber }))} currentRoundId={r.id}
                 onSaveScore={(a, b) => setResult.mutate({ id: m.id, scoreA: a, scoreB: b })}
                 onSaveMeta={(mode, map, datetime, mapHidden) => setMeta.mutate({ id: m.id, gameMode: mode, map, datetime, mapHidden })}
+                onMove={(roundId) => setMeta.mutate({ id: m.id, roundId })}
                 onDelete={() => delMatch.mutate(m.id)} />
             ))}
             {r.matches.length === 0 && <p className="text-sm text-muted-foreground">Aucun affrontement (pas assez de joueurs).</p>}
@@ -338,13 +340,16 @@ function toLocalInput(v: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function MatchRow({ m, onSaveScore, onSaveMeta, onDelete, modeOptions, mapOptions }: {
+function MatchRow({ m, onSaveScore, onSaveMeta, onMove, onDelete, modeOptions, mapOptions, rounds, currentRoundId }: {
   m: MatchView;
   onSaveScore: (a: number, b: number) => void;
   onSaveMeta: (mode: string, map: string, datetime: string | null, mapHidden: boolean) => void;
+  onMove: (roundId: string) => void;
   onDelete: () => void;
   modeOptions: ImageOption[];
   mapOptions: ImageOption[];
+  rounds: { id: string; roundNumber: number }[];
+  currentRoundId: string;
 }) {
   const [a, setA] = useState(String(m.scoreA));
   const [b, setB] = useState(String(m.scoreB));
@@ -356,9 +361,18 @@ function MatchRow({ m, onSaveScore, onSaveMeta, onDelete, modeOptions, mapOption
     <div className="border rounded-lg p-3 space-y-2 bg-background/40">
       <div className="flex items-center justify-between gap-2">
         <MetaBadges gameMode={m.gameMode} map={m.map} />
-        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Supprimer l'affrontement" onClick={onDelete}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground flex items-center gap-1" title="Déplacer vers un autre tour">
+            Tour
+            <select value={currentRoundId} onChange={(e) => { if (e.target.value !== currentRoundId) onMove(e.target.value); }}
+              className="h-7 rounded-md border bg-background px-1.5 text-xs">
+              {rounds.map((r) => <option key={r.id} value={r.id}>{r.roundNumber}</option>)}
+            </select>
+          </label>
+          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Supprimer l'affrontement" onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Composition claire des deux trios */}
