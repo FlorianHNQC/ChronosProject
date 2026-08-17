@@ -11,6 +11,7 @@ import { registerSettingsRoutes } from "./settingsRoutes";
 import { registerAwardsRoutes } from "./awardsRoutes";
 import { registerRandomRoutes } from "./randomRoutes";
 import { registerUploadRoutes } from "./uploadRoutes";
+import { registerBrawlifyRoutes } from "./brawlifyRoutes";
 import { registerCompetitionsRoutes } from "./competitionsRoutes";
 import { registerTeamsRoutes } from "./teamsRoutes";
 import { registerMatchesRoutes } from "./matchesRoutes";
@@ -95,6 +96,7 @@ app.use((req, res, next) => {
   registerAwardsRoutes(app);
   registerRandomRoutes(app);
   registerUploadRoutes(app);
+  registerBrawlifyRoutes(app);
   registerCompetitionsRoutes(app);
   registerTeamsRoutes(app);
   registerMatchesRoutes(app);

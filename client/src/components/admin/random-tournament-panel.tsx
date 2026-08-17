@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Shuffle, X, Trash2, Scale, UserRound, LayoutGrid } from "lucide-react";
 import { PlayerPoules } from "@/components/player-poules";
+import { ImageSelect, type ImageOption } from "@/components/image-select";
 import type { Player } from "@shared/schema";
+
+type BsMode = { id: number | null; name: string; imageUrl: string | null; color: string | null };
+type BsMap = { id: number | null; name: string; imageUrl: string | null; mode: string | null; modeImageUrl: string | null; modeColor: string | null };
 
 type PoolPlayer = { playerId: string; pseudo: string; avatarUrl: string | null; poolLabel?: string | null };
 type MatchView = { id: string; teamA: PoolPlayer[]; teamB: PoolPlayer[]; scoreA: number; scoreB: number; winner: string | null; gameMode: string | null; map: string | null };
@@ -27,6 +31,31 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
     queryKey: ["/api/random/suggestions"],
     queryFn: async () => (await apiRequest("GET", "/api/random/suggestions")).json(),
   });
+  const { data: bsModes } = useQuery<BsMode[]>({
+    queryKey: ["/api/bs/gamemodes"],
+    queryFn: async () => (await apiRequest("GET", "/api/bs/gamemodes")).json(),
+    staleTime: 60 * 60 * 1000,
+  });
+  const { data: bsMaps } = useQuery<BsMap[]>({
+    queryKey: ["/api/bs/maps"],
+    queryFn: async () => (await apiRequest("GET", "/api/bs/maps")).json(),
+    staleTime: 60 * 60 * 1000,
+  });
+  // Options visuelles : catalogue Brawlify + entrées déjà saisies (repli).
+  const modeOptions: ImageOption[] = useMemo(() => {
+    const seen = new Set<string>();
+    const out: ImageOption[] = [];
+    for (const m of bsModes ?? []) { if (!seen.has(m.name)) { seen.add(m.name); out.push({ value: m.name, label: m.name, imageUrl: m.imageUrl, color: m.color }); } }
+    for (const s of suggestions?.modes ?? []) { if (!seen.has(s)) { seen.add(s); out.push({ value: s, label: s }); } }
+    return out;
+  }, [bsModes, suggestions]);
+  const mapOptions: ImageOption[] = useMemo(() => {
+    const seen = new Set<string>();
+    const out: ImageOption[] = [];
+    for (const m of bsMaps ?? []) { if (!seen.has(m.name)) { seen.add(m.name); out.push({ value: m.name, label: m.name, imageUrl: m.imageUrl, sub: m.mode, subImageUrl: m.modeImageUrl }); } }
+    for (const s of suggestions?.maps ?? []) { if (!seen.has(s)) { seen.add(s); out.push({ value: s, label: s }); } }
+    return out;
+  }, [bsMaps, suggestions]);
 
   const get = <T,>(path: string) => ({
     queryKey: ["/api/random", cid, path],
@@ -123,10 +152,6 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
 
   return (
     <div>
-      {/* Listes d'auto-complétion partagées (modes / maps déjà saisis). */}
-      <datalist id="rnd-modes">{(suggestions?.modes ?? []).map((m) => <option key={m} value={m} />)}</datalist>
-      <datalist id="rnd-maps">{(suggestions?.maps ?? []).map((m) => <option key={m} value={m} />)}</datalist>
-
       {/* Pool */}
       <Card className="p-4 mb-6">
         <h2 className="font-semibold mb-2">Pool de joueurs ({pool?.length ?? 0})</h2>
@@ -192,8 +217,8 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
             <option value="">Nouveau tour</option>
             {[...(rounds ?? [])].reverse().map((r) => <option key={r.id} value={r.id}>Tour {r.roundNumber}</option>)}
           </select>
-          <Input list="rnd-modes" value={maMode} onChange={(e) => setMaMode(e.target.value)} placeholder="Mode" className="w-40 h-9" />
-          <Input list="rnd-maps" value={maMap} onChange={(e) => setMaMap(e.target.value)} placeholder="Map" className="w-40 h-9" />
+          <div className="w-40"><ImageSelect value={maMode} onChange={setMaMode} options={modeOptions} placeholder="Mode" /></div>
+          <div className="w-40"><ImageSelect value={maMap} onChange={setMaMap} options={mapOptions} placeholder="Map" /></div>
           <Button size="sm" disabled={maA.length === 0 || maB.length === 0 || addMatch.isPending} onClick={() => addMatch.mutate()}>
             Créer l'affrontement
           </Button>
@@ -235,8 +260,7 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Input list="rnd-modes" value={gameMode} onChange={(e) => setGameMode(e.target.value)}
-            placeholder={randomMode ? "(tiré au hasard)" : "Mode (ex. Gem Grab)"} className="w-52 h-9" disabled={randomMode} />
+          <div className="w-52"><ImageSelect value={gameMode} onChange={setGameMode} options={modeOptions} placeholder={randomMode ? "(tiré au hasard)" : "Mode (ex. Gem Grab)"} disabled={randomMode} /></div>
           <Input value={bans} onChange={(e) => setBans(e.target.value)} placeholder="Bans (ex. Piper, Edgar)" className="w-52 h-9" />
           <Button size="sm" disabled={present.size < 6 || draw.isPending} onClick={() => draw.mutate()}>
             <Shuffle className="h-4 w-4 mr-1" /> Tirer le tour
@@ -258,7 +282,7 @@ export function RandomTournamentPanel({ competitionId: cid }: { competitionId: s
           </div>
           <div className="space-y-2">
             {r.matches.map((m) => (
-              <MatchRow key={m.id} m={m}
+              <MatchRow key={m.id} m={m} modeOptions={modeOptions} mapOptions={mapOptions}
                 onSaveScore={(a, b) => setResult.mutate({ id: m.id, scoreA: a, scoreB: b })}
                 onSaveMeta={(mode, map) => setMeta.mutate({ id: m.id, gameMode: mode, map })}
                 onDelete={() => delMatch.mutate(m.id)} />
@@ -321,11 +345,13 @@ function TeamBlock({ label, players, side, won }: { label: string; players: Pool
   );
 }
 
-function MatchRow({ m, onSaveScore, onSaveMeta, onDelete }: {
+function MatchRow({ m, onSaveScore, onSaveMeta, onDelete, modeOptions, mapOptions }: {
   m: MatchView;
   onSaveScore: (a: number, b: number) => void;
   onSaveMeta: (mode: string, map: string) => void;
   onDelete: () => void;
+  modeOptions: ImageOption[];
+  mapOptions: ImageOption[];
 }) {
   const [a, setA] = useState(String(m.scoreA));
   const [b, setB] = useState(String(m.scoreB));
@@ -359,9 +385,9 @@ function MatchRow({ m, onSaveScore, onSaveMeta, onDelete }: {
 
       <div className="flex items-center gap-2 flex-wrap pt-1">
         <span className="text-xs text-muted-foreground">Mode</span>
-        <Input list="rnd-modes" value={mode} onChange={(e) => setMode(e.target.value)} placeholder="ex. Gem Grab" className="w-40 h-8" />
+        <div className="w-40"><ImageSelect value={mode} onChange={setMode} options={modeOptions} placeholder="Mode" /></div>
         <span className="text-xs text-muted-foreground">Map</span>
-        <Input list="rnd-maps" value={map} onChange={(e) => setMap(e.target.value)} placeholder="ex. Hard Rock Mine" className="w-44 h-8" />
+        <div className="w-44"><ImageSelect value={map} onChange={setMap} options={mapOptions} placeholder="Map" /></div>
         <Button size="sm" variant="outline" onClick={() => onSaveMeta(mode, map)}>Enregistrer</Button>
       </div>
     </div>
