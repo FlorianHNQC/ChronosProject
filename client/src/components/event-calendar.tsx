@@ -64,10 +64,15 @@ export function EventCalendar({ events, emptyLabel = "Aucun événement." }: { e
       const isPast = e.status === "completed" || e.status === "cancelled" || (e.datetime ? new Date(e.datetime).getTime() < now - DAY_MS : true);
       (isPast ? pa : up).push(e);
     }
+    const ts = (e: CalEvent) => (e.datetime ? new Date(e.datetime).getTime() : 0);
     const groupBy = (list: CalEvent[], dir: 1 | -1) => {
       const g = new Map<string, CalEvent[]>();
       for (const e of list) { const k = dayKey(e.datetime); if (!g.has(k)) g.set(k, []); g.get(k)!.push(e); }
-      return Array.from(g.entries()).sort((a, b) => (a[0] < b[0] ? -dir : a[0] > b[0] ? dir : 0));
+      // Tri chronologique au sein d'un jour, dans le même sens que les jours.
+      for (const items of Array.from(g.values())) items.sort((a, b) => dir * (ts(a) - ts(b)));
+      // Jours sans date (clé "0000-00-00") toujours en dernier.
+      const rank = (k: string) => (k === "0000-00-00" ? Infinity : 0);
+      return Array.from(g.entries()).sort((a, b) => rank(a[0]) - rank(b[0]) || (a[0] < b[0] ? -dir : a[0] > b[0] ? dir : 0));
     };
     return { upcoming: groupBy(up, 1), past: groupBy(pa, -1) };
   }, [events]);

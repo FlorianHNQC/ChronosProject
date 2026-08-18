@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Trophy, LayoutGrid, Swords, X, CalendarDays } from "lucide-react";
+import { Trophy, LayoutGrid, Swords, CalendarDays } from "lucide-react";
 import { PlayerPoules } from "@/components/player-poules";
 import { MatchVisualView } from "@/components/match-visual";
 
@@ -19,7 +19,6 @@ const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { we
 /** Vue publique d'un tournoi à équipes aléatoires : affrontements (+ poules) et classement, en onglets. */
 export function RandomPhase({ competitionId }: { competitionId: string }) {
   const [tab, setTab] = useState<"matchs" | "calendrier" | "classement">("matchs");
-  const [detail, setDetail] = useState<{ m: MatchView; bans: string[] } | null>(null);
 
   const { data: rounds } = useQuery<RoundView[]>({
     queryKey: ["/api/random", competitionId, "rounds"],
@@ -47,6 +46,13 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
   const byDay = new Map<string, typeof dated>();
   for (const x of dated) { const k = dayKey(x.m.datetime!); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k)!.push(x); }
   const undatedCount = allWithBans.length - dated.length;
+  // À venir d'abord (le plus proche en premier), puis les jours passés.
+  const todayKey = dayKey(new Date().toISOString());
+  const dayEntries = Array.from(byDay.entries());
+  const orderedDays = [
+    ...dayEntries.filter(([k]) => k >= todayKey).sort((a, b) => (a[0] < b[0] ? -1 : 1)),
+    ...dayEntries.filter(([k]) => k < todayKey).sort((a, b) => (a[0] > b[0] ? -1 : 1)),
+  ];
 
   return (
     <div>
@@ -78,14 +84,13 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
               </div>
               <div className="flex flex-wrap gap-3">
                 {r.matches.map((m) => (
-                  <MatchVisualView key={m.id} className="w-[300px]"
+                  <MatchVisualView key={m.id} className="w-[340px]" expandable
                     mapName={m.map} modeName={m.gameMode} mapHidden={m.mapHidden}
                     time={m.datetime ? fmtTime(m.datetime) : null}
                     a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}
                     b={{ name: "Équipe B", players: m.teamB, won: m.winner === "b" }}
                     score={m.winner ? { a: m.scoreA, b: m.scoreB } : null}
                     bans={splitBans(r.bans)}
-                    onExpand={() => setDetail({ m, bans: splitBans(r.bans) })}
                   />
                 ))}
                 {r.matches.length === 0 && <p className="text-sm text-muted-foreground">Aucun affrontement.</p>}
@@ -99,21 +104,20 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
           {byDay.size === 0 ? (
             <p className="text-sm text-muted-foreground">Aucun affrontement daté. Ajoute une date sur les affrontements pour les voir ici.</p>
           ) : (
-            Array.from(byDay.entries()).map(([k, list]) => (
+            orderedDays.map(([k, list]) => (
               <div key={k}>
                 <div className="text-sm font-semibold text-primary capitalize mb-3 flex items-center gap-2">
                   <CalendarDays className="h-4 w-4" /> {dayLabel(list[0].m.datetime!)} <span className="text-muted-foreground font-normal">· {list.length}</span>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {list.map(({ m, bans }) => (
-                    <MatchVisualView key={m.id} className="w-[300px]"
+                    <MatchVisualView key={m.id} className="w-[340px]" expandable
                       mapName={m.map} modeName={m.gameMode} mapHidden={m.mapHidden}
                       time={fmtTime(m.datetime!)}
                       a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}
                       b={{ name: "Équipe B", players: m.teamB, won: m.winner === "b" }}
                       score={m.winner ? { a: m.scoreA, b: m.scoreB } : null}
                       bans={bans}
-                      onExpand={() => setDetail({ m, bans })}
                     />
                   ))}
                 </div>
@@ -125,34 +129,6 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
       ) : (
         <Leaderboard board={board ?? []} />
       )}
-
-      {detail && <DetailModal m={detail.m} bans={detail.bans} onClose={() => setDetail(null)} />}
-    </div>
-  );
-}
-
-function DetailModal({ m, bans, onClose }: { m: MatchView; bans: string[]; onClose: () => void }) {
-  const done = !!m.winner;
-  const sub = m.datetime ? new Date(m.datetime).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="relative" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute -top-3 -right-3 z-10 h-8 w-8 rounded-full bg-card border flex items-center justify-center hover:bg-muted">
-          <X className="h-4 w-4" />
-        </button>
-        <MatchVisualView
-          large
-          mapName={m.map}
-          modeName={m.gameMode}
-          mapHidden={m.mapHidden}
-          time={sub}
-          a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}
-          b={{ name: "Équipe B", players: m.teamB, won: m.winner === "b" }}
-          score={done ? { a: m.scoreA, b: m.scoreB } : null}
-          bans={bans}
-          className="w-[460px] max-w-[94vw] shadow-2xl"
-        />
-      </div>
     </div>
   );
 }

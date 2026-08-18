@@ -58,7 +58,7 @@ export function MatchesPage() {
           status: done ? "completed" : "upcoming",
           chip: `${t ? t + " " : ""}${trio(m.teamA)} ${done ? `${m.scoreA}-${m.scoreB}` : "vs"} ${trio(m.teamB)}`,
           card: (
-            <MatchVisualView className="w-[320px]"
+            <MatchVisualView className="w-[340px]" expandable
               mapName={m.map} modeName={m.gameMode} mapHidden={m.mapHidden}
               time={m.datetime ? new Date(m.datetime).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null}
               a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}
