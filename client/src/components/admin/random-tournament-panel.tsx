@@ -311,7 +311,7 @@ function SidePicker({ label, value, onChange, pool, exclude }: {
 function TeamBlock({ label, players, side, won }: { label: string; players: PoolPlayer[]; side: "a" | "b"; won: boolean }) {
   const accent = side === "a" ? "#3BA7E2" : "#E2683B";
   return (
-    <div className={"flex-1 min-w-[9rem] rounded-lg border p-2 " + (won ? "ring-2" : "")} style={won ? { borderColor: accent, boxShadow: `inset 0 0 0 1px ${accent}` } : undefined}>
+    <div className={"flex-1 min-w-0 w-full sm:w-auto rounded-lg border p-2 " + (won ? "ring-2" : "")} style={won ? { borderColor: accent, boxShadow: `inset 0 0 0 1px ${accent}` } : undefined}>
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: accent }}>{label}</span>
         {won && <span className="text-[10px] font-bold" style={{ color: accent }}>Vainqueur</span>}
@@ -375,10 +375,10 @@ function MatchRow({ m, onSaveScore, onSaveMeta, onMove, onDelete, modeOptions, m
         </div>
       </div>
 
-      {/* Composition claire des deux trios */}
-      <div className="flex items-stretch gap-2">
+      {/* Composition claire des deux trios (empilée sur mobile, côte à côte ensuite) */}
+      <div className="flex flex-col sm:flex-row sm:items-stretch gap-2">
         <TeamBlock label="Équipe A" players={m.teamA} side="a" won={m.winner === "a"} />
-        <div className="flex flex-col items-center justify-center gap-1 shrink-0">
+        <div className="flex sm:flex-col items-center justify-center gap-1 shrink-0">
           <div className="flex items-center gap-1">
             <Input type="number" value={a} onChange={(e) => setA(e.target.value)} className="w-12 h-8 text-center" />
             <span className="text-muted-foreground">–</span>
