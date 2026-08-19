@@ -46,8 +46,9 @@ export function ImageSelect({
 
   return (
     <div ref={ref} className={"relative " + className}>
-      <button type="button" disabled={disabled} onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 h-9 w-full rounded-md border bg-background px-2 text-sm disabled:opacity-50">
+      <div role="button" tabIndex={0} aria-disabled={disabled}
+        onClick={() => !disabled && setOpen((v) => !v)}
+        className={"flex items-center gap-2 h-9 w-full rounded-md border bg-background px-2 text-sm cursor-pointer " + (disabled ? "opacity-50 pointer-events-none" : "")}>
         {selected?.imageUrl ? (
           <img src={selected.imageUrl} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
         ) : null}
@@ -58,7 +59,7 @@ export function ImageSelect({
           </span>
         )}
         <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-      </button>
+      </div>
 
       {open && (
         <div className="absolute z-50 mt-1 w-72 max-w-[90vw] rounded-md border bg-popover shadow-lg">
@@ -71,8 +72,8 @@ export function ImageSelect({
             </div>
           </div>
           <div className="max-h-72 overflow-y-auto py-1">
-            {filtered.map((o) => (
-              <button key={o.value} type="button" onClick={() => { onChange(o.value); setOpen(false); setQ(""); }}
+            {filtered.map((o, i) => (
+              <button key={o.value + "#" + i} type="button" onClick={() => { onChange(o.value); setOpen(false); setQ(""); }}
                 className={"flex items-center gap-2 w-full px-2 py-1.5 text-left text-sm hover:bg-muted " + (o.value === value ? "bg-muted" : "")}>
                 {o.imageUrl ? (
                   <img src={o.imageUrl} alt="" className="h-8 w-8 rounded object-cover shrink-0" />

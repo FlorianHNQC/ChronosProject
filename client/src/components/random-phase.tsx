@@ -84,7 +84,7 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
               </div>
               <div className="flex flex-wrap gap-3">
                 {r.matches.map((m) => (
-                  <MatchVisualView key={m.id} className="w-[340px]" expandable
+                  <MatchVisualView key={m.id} className="w-full sm:w-[340px]" expandable
                     mapName={m.map} modeName={m.gameMode} mapHidden={m.mapHidden}
                     time={m.datetime ? fmtTime(m.datetime) : null}
                     a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}
@@ -111,7 +111,7 @@ export function RandomPhase({ competitionId }: { competitionId: string }) {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {list.map(({ m, bans }) => (
-                    <MatchVisualView key={m.id} className="w-[340px]" expandable
+                    <MatchVisualView key={m.id} className="w-full sm:w-[340px]" expandable
                       mapName={m.map} modeName={m.gameMode} mapHidden={m.mapHidden}
                       time={fmtTime(m.datetime!)}
                       a={{ name: "Équipe A", players: m.teamA, won: m.winner === "a" }}

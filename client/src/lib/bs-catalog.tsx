@@ -33,8 +33,16 @@ export function useBsCatalog() {
     const modeByName = new Map((modes ?? []).map((m) => [norm(m.name), m]));
     const mapByName = new Map((maps ?? []).map((m) => [norm(m.name), m]));
     const brawlerByName = new Map((brawlers ?? []).map((b) => [norm(b.name), b]));
-    const modeOptions: ImageOption[] = (modes ?? []).map((m) => ({ value: m.name, label: m.name, imageUrl: m.imageUrl, color: m.color }));
-    const mapOptions: ImageOption[] = (maps ?? []).map((m) => ({ value: m.name, label: m.name, imageUrl: m.imageUrl, sub: m.mode, subImageUrl: m.modeImageUrl }));
+    // Déduplication par nom : BrawlAPI renvoie parfois plusieurs maps/modes
+    // homonymes → sinon options + clés React dupliquées (filtre cassé).
+    const dedup = (list: ImageOption[]): ImageOption[] => {
+      const seen = new Set<string>();
+      const out: ImageOption[] = [];
+      for (const o of list) { const k = norm(o.value); if (!seen.has(k)) { seen.add(k); out.push(o); } }
+      return out;
+    };
+    const modeOptions = dedup((modes ?? []).map((m) => ({ value: m.name, label: m.name, imageUrl: m.imageUrl, color: m.color })));
+    const mapOptions = dedup((maps ?? []).map((m) => ({ value: m.name, label: m.name, imageUrl: m.imageUrl, sub: m.mode, subImageUrl: m.modeImageUrl })));
     return { modes: modes ?? [], maps: maps ?? [], brawlers: brawlers ?? [], modeByName, mapByName, brawlerByName, modeOptions, mapOptions };
   }, [modes, maps, brawlers]);
 }

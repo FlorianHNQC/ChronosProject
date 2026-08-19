@@ -99,7 +99,7 @@ export function MatchVisualView({
 
   return (
     <>
-      <div className={"relative rounded-xl border bg-card overflow-hidden shrink-0 " + className}>
+      <div className={"relative rounded-xl border bg-card overflow-hidden shrink-0 max-w-full " + className}>
         {expandable && (
           <button type="button" onClick={() => setOpen(true)} title="Agrandir le match"
             className="absolute top-1.5 right-1.5 z-10 h-7 w-7 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/75">
